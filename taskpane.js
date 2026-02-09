@@ -25,6 +25,18 @@ const tonePrompts = {
     myvoice: "Convert the following rough notes, shorthand, or bullet points into a complete professional email written in the sender's natural voice.\n\nGuidelines:\n• Write in a style that is professional but conversational.\n• Be clear, direct, and relationship-focused.\n• Maintain technical credibility without sounding overly formal or marketing-driven.\n• Keep the message natural and easy to read.\n\nContent Rules:\n• Preserve original meaning and factual content.\n• Do not invent details, specifications, or commitments.\n• If notes are vague, keep language appropriately general and safe.\n\nStructure:\n• Organize the message into a logical email flow.\n• Add transitions and readability improvements where needed.\n• Keep length appropriate to the content (do not over-expand)."
 };
 
+// Subject line prompts (only used when subject is empty)
+const subjectPrompts = {
+    professional: "\n\nAlso provide a professional, clear subject line for this email. Return it on the first line as 'Subject: [your subject]' followed by a blank line, then the email body.",
+    friendly: "\n\nAlso provide a friendly, engaging subject line for this email. Return it on the first line as 'Subject: [your subject]' followed by a blank line, then the email body.",
+    casual: "\n\nAlso provide a casual, straightforward subject line for this email. Return it on the first line as 'Subject: [your subject]' followed by a blank line, then the email body.",
+    brief: "\n\nAlso provide a brief, direct subject line for this email. Return it on the first line as 'Subject: [your subject]' followed by a blank line, then the email body.",
+    diplomatic: "\n\nAlso provide a diplomatic, professional subject line for this email. Return it on the first line as 'Subject: [your subject]' followed by a blank line, then the email body.",
+    cleanup: "\n\nAlso provide a clear subject line for this email. Return it on the first line as 'Subject: [your subject]' followed by a blank line, then the email body.",
+    sales: "\n\nAlso provide a compelling, professional subject line for this email. Return it on the first line as 'Subject: [your subject]' followed by a blank line, then the email body.",
+    myvoice: "\n\nAlso provide an appropriate subject line for this email. Return it on the first line as 'Subject: [your subject]' followed by a blank line, then the email body."
+};
+
 // View Management
 window.showSettingsView = function() {
     document.getElementById('mainView').classList.remove('active');
@@ -144,6 +156,18 @@ function showSettingsStatus(message, type) {
     }, 3000);
 }
 
+// Strip signature from email body
+function stripSignature(text) {
+    const signatureMarker = "Best regards,";
+    const index = text.indexOf(signatureMarker);
+    
+    if (index !== -1) {
+        return text.substring(0, index).trim();
+    }
+    
+    return text;
+}
+
 // Generate draft using AI
 window.generateDraft = async function() {
     const statusDiv = document.getElementById('statusMessage');
@@ -161,63 +185,98 @@ window.generateDraft = async function() {
     generateBtn.textContent = 'Generating...';
 
     try {
-        // Get the current email body
+        // Get the current email item
         const item = Office.context.mailbox.item;
         
-        item.body.getAsync(Office.CoercionType.Text, async (result) => {
-            if (result.status === Office.AsyncResultStatus.Succeeded) {
-                const originalText = result.value.trim();
-                
-                if (!originalText) {
-                    showStatus('Please write some notes in the email body first.', 'error');
-                    generateBtn.disabled = false;
-                    generateBtn.textContent = 'Generate Draft';
-                    return;
-                }
+        // Check if subject is empty
+        item.subject.getAsync(async (subjectResult) => {
+            const hasSubject = subjectResult.status === Office.AsyncResultStatus.Succeeded && 
+                              subjectResult.value && 
+                              subjectResult.value.trim().length > 0;
+            
+            // Get email body
+            item.body.getAsync(Office.CoercionType.Text, async (bodyResult) => {
+                if (bodyResult.status === Office.AsyncResultStatus.Succeeded) {
+                    let originalText = bodyResult.value.trim();
+                    
+                    // Strip signature
+                    originalText = stripSignature(originalText);
+                    
+                    if (!originalText) {
+                        showStatus('Please write some notes in the email body first.', 'error');
+                        generateBtn.disabled = false;
+                        generateBtn.textContent = 'Generate Draft';
+                        return;
+                    }
 
-                // Get selected tone
-                const tone = document.getElementById('toneSelect').value;
-                const prompt = tonePrompts[tone];
+                    // Get selected tone
+                    const tone = document.getElementById('toneSelect').value;
+                    let prompt = tonePrompts[tone];
+                    
+                    // Add subject generation prompt if subject is empty
+                    if (!hasSubject) {
+                        prompt += subjectPrompts[tone];
+                    }
 
-                // Get API settings from localStorage
-                const apiProvider = localStorage.getItem('apiProvider') || 'openai';
-                const openaiKey = localStorage.getItem('openaiKey');
-                const claudeKey = localStorage.getItem('claudeKey');
+                    // Get API settings from localStorage
+                    const apiProvider = localStorage.getItem('apiProvider') || 'openai';
+                    const openaiKey = localStorage.getItem('openaiKey');
+                    const claudeKey = localStorage.getItem('claudeKey');
 
-                // Check if API key exists
-                if (apiProvider === 'openai' && !openaiKey) {
-                    showStatus('Please add your OpenAI API key in Settings first.', 'error');
-                    generateBtn.disabled = false;
-                    generateBtn.textContent = 'Generate Draft';
-                    return;
-                }
-                if (apiProvider === 'claude' && !claudeKey) {
-                    showStatus('Please add your Claude API key in Settings first.', 'error');
-                    generateBtn.disabled = false;
-                    generateBtn.textContent = 'Generate Draft';
-                    return;
-                }
+                    // Check if API key exists
+                    if (apiProvider === 'openai' && !openaiKey) {
+                        showStatus('Please add your OpenAI API key in Settings first.', 'error');
+                        generateBtn.disabled = false;
+                        generateBtn.textContent = 'Generate Draft';
+                        return;
+                    }
+                    if (apiProvider === 'claude' && !claudeKey) {
+                        showStatus('Please add your Claude API key in Settings first.', 'error');
+                        generateBtn.disabled = false;
+                        generateBtn.textContent = 'Generate Draft';
+                        return;
+                    }
 
-                // Call the appropriate API
-                let draftText;
-                if (apiProvider === 'openai') {
-                    draftText = await callOpenAI(prompt, originalText, openaiKey);
+                    // Call the appropriate API
+                    let draftText;
+                    if (apiProvider === 'openai') {
+                        draftText = await callOpenAI(prompt, originalText, openaiKey);
+                    } else {
+                        draftText = await callClaude(prompt, originalText, claudeKey);
+                    }
+
+                    // Check if response includes a subject line
+                    let generatedSubject = null;
+                    if (!hasSubject && draftText.startsWith('Subject:')) {
+                        const lines = draftText.split('\n');
+                        const subjectLine = lines[0];
+                        generatedSubject = subjectLine.replace('Subject:', '').trim();
+                        
+                        // Remove subject line from body
+                        draftText = lines.slice(2).join('\n').trim(); // Skip subject and blank line
+                        
+                        // Set the subject
+                        item.subject.setAsync(generatedSubject);
+                    }
+
+                    // Display the draft
+                    outputDiv.textContent = draftText;
+                    outputDiv.style.display = 'block';
+                    actionButtons.style.display = 'block';
+                    
+                    let statusMessage = 'Draft generated successfully!';
+                    if (generatedSubject) {
+                        statusMessage += ' Subject line added.';
+                    }
+                    showStatus(statusMessage, 'success');
+
                 } else {
-                    draftText = await callClaude(prompt, originalText, claudeKey);
+                    showStatus('Error reading email body: ' + bodyResult.error.message, 'error');
                 }
 
-                // Display the draft
-                outputDiv.textContent = draftText;
-                outputDiv.style.display = 'block';
-                actionButtons.style.display = 'block';
-                showStatus('Draft generated successfully!', 'success');
-
-            } else {
-                showStatus('Error reading email body: ' + result.error.message, 'error');
-            }
-
-            generateBtn.disabled = false;
-            generateBtn.textContent = 'Generate Draft';
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Draft';
+            });
         });
 
     } catch (error) {
