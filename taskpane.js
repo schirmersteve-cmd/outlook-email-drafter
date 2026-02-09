@@ -54,6 +54,7 @@ function loadSettings() {
     const openaiKey = localStorage.getItem('openaiKey') || '';
     const claudeKey = localStorage.getItem('claudeKey') || '';
     const openaiModel = localStorage.getItem('openaiModel') || 'gpt-5.2';
+    const claudeModel = localStorage.getItem('claudeModel') || 'claude-3-5-sonnet-20241022';
     
     document.getElementById('apiProviderSelect').value = apiProvider;
     document.getElementById('openaiKeyInput').value = openaiKey;
@@ -68,6 +69,23 @@ function loadSettings() {
     }
     
     updateProviderFields();
+    updateModelDisplay();
+}
+
+// Update the model display on main screen
+function updateModelDisplay() {
+    const apiProvider = localStorage.getItem('apiProvider') || 'openai';
+    const modelElement = document.getElementById('currentModel');
+    
+    if (modelElement) {
+        if (apiProvider === 'openai') {
+            const model = localStorage.getItem('openaiModel') || 'gpt-5.2';
+            modelElement.textContent = 'OpenAI ' + model;
+        } else {
+            const model = localStorage.getItem('claudeModel') || 'claude-3-5-sonnet-20241022';
+            modelElement.textContent = 'Claude ' + model;
+        }
+    }
 }
 
 // Update provider-specific fields
@@ -139,6 +157,8 @@ window.saveSettings = function() {
         localStorage.setItem('claudeKey', apiKey);
         showSettingsStatus('Claude settings saved!', 'success');
     }
+    
+    updateModelDisplay();
     
     setTimeout(() => {
         showMainView();
