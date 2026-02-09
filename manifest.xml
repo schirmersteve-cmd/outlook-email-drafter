@@ -11,8 +11,8 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Email Drafter"/>
   <Description DefaultValue="AI-powered email drafting assistant"/>
-  <IconUrl DefaultValue="https://YOUR-SHAREPOINT-URL-HERE/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="https://YOUR-SHAREPOINT-URL-HERE/icon-64.png"/>
+  <IconUrl DefaultValue="https://schirmersteve-cmd.github.io/outlook-email-drafter/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://schirmersteve-cmd.github.io/outlook-email-drafter/icon-64.png"/>
   <SupportUrl DefaultValue="https://www.contoso.com/support"/>
   
   <AppDomains>
@@ -33,7 +33,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://YOUR-SHAREPOINT-URL-HERE/taskpane.html"/>
+        <SourceLocation DefaultValue="https://schirmersteve-cmd.github.io/outlook-email-drafter"/>
         <RequestedHeight>250</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -92,13 +92,13 @@
       
       <Resources>
         <bt:Images>
-          <bt:Image id="Icon.16x16" DefaultValue="https://YOUR-SHAREPOINT-URL-HERE/icon-16.png"/>
-          <bt:Image id="Icon.32x32" DefaultValue="https://YOUR-SHAREPOINT-URL-HERE/icon-32.png"/>
-          <bt:Image id="Icon.80x80" DefaultValue="https://YOUR-SHAREPOINT-URL-HERE/icon-80.png"/>
+          <bt:Image id="Icon.16x16" DefaultValue="https://schirmersteve-cmd.github.io/outlook-email-drafter/icon-16.png"/>
+          <bt:Image id="Icon.32x32" DefaultValue="https://schirmersteve-cmd.github.io/outlook-email-drafter/icon-32.png"/>
+          <bt:Image id="Icon.80x80" DefaultValue="https://schirmersteve-cmd.github.io/outlook-email-drafter/icon-80.png"/>
         </bt:Images>
         <bt:Urls>
-          <bt:Url id="Commands.Url" DefaultValue="https://YOUR-SHAREPOINT-URL-HERE/taskpane.html"/>
-          <bt:Url id="Taskpane.Url" DefaultValue="https://YOUR-SHAREPOINT-URL-HERE/taskpane.html"/>
+          <bt:Url id="Commands.Url" DefaultValue="https://schirmersteve-cmd.github.io/outlook-email-drafter/taskpane.html"/>
+          <bt:Url id="Taskpane.Url" DefaultValue="https://schirmersteve-cmd.github.io/outlook-email-drafter/taskpane.html"/>
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="GroupLabel" DefaultValue="Email Drafter"/>
