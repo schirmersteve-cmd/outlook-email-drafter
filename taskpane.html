@@ -88,19 +88,37 @@
             color: #0078d4;
             text-decoration: none;
         }
+        .category-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #666;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h2>✨ Email Drafter</h2>
         
-        <label for="toneSelect"><strong>Select Tone:</strong></label>
+        <label for="toneSelect"><strong>Select Style:</strong></label>
         <select id="toneSelect">
-            <option value="professional">Polished Professional</option>
-            <option value="friendly">Friendly Professional</option>
-            <option value="brief">Brief & Direct</option>
-            <option value="casual">Casual</option>
-            <option value="diplomatic">Apologetic/Diplomatic</option>
+            <optgroup label="🤝 RELATIONSHIP / TONE">
+                <option value="professional">Professional</option>
+                <option value="friendly">Friendly</option>
+                <option value="casual">Casual</option>
+                <option value="brief">Brief</option>
+                <option value="diplomatic">Diplomatic</option>
+            </optgroup>
+            <optgroup label="⚙️ UTILITY / PERFORMANCE">
+                <option value="cleanup">Cleanup</option>
+                <option value="sales">Sales Upgrade</option>
+            </optgroup>
+            <optgroup label="🧬 PERSONAL VOICE">
+                <option value="myvoice">My Voice From Notes</option>
+            </optgroup>
         </select>
 
         <button id="generateBtn" onclick="generateDraft()">Generate Draft</button>
