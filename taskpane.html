@@ -141,6 +141,18 @@
             color: #999;
             margin-top: 5px;
         }
+        .model-indicator {
+            font-size: 11px;
+            color: #888;
+            margin-top: 15px;
+            padding: 8px;
+            background-color: #2d2d2d;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .model-indicator strong {
+            color: #4a9eff;
+        }
         
         /* Scrollbar styling for dark mode */
         ::-webkit-scrollbar {
@@ -164,6 +176,10 @@
         <!-- MAIN VIEW -->
         <div id="mainView" class="view active">
             <h2>✨ Email Drafter</h2>
+            
+            <div id="modelIndicator" class="model-indicator">
+                Currently using: <strong id="currentModel">Loading...</strong>
+            </div>
             
             <label for="toneSelect"><strong>Select Style:</strong></label>
             <select id="toneSelect">
