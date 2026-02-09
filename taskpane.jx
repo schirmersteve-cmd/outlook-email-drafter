@@ -1,0 +1,64 @@
+// Initialize Office
+Office.onReady((info) => {
+    if (info.host === Office.HostType.Outlook) {
+        console.log("Email Drafter loaded successfully");
+    }
+});
+
+// Tone prompts for different email styles
+const tonePrompts = {
+    professional: "Rewrite the following notes as a polished, professional business email. Use formal language, proper structure, and maintain a respectful tone. Keep it clear and concise.",
+    friendly: "Rewrite the following notes as a warm, friendly professional email. Be approachable and personable while maintaining professionalism. Use a conversational but business-appropriate tone.",
+    brief: "Rewrite the following notes as a brief, direct email. Get straight to the point. Use short sentences and minimal pleasantries. Be clear and action-oriented.",
+    casual: "Rewrite the following notes as a casual, relaxed email. Use a conversational tone as if writing to a colleague or familiar contact. Keep it friendly and informal.",
+    diplomatic: "Rewrite the following notes as a diplomatic, apologetic email. Handle the situation delicately, acknowledge any issues, and maintain a professional yet empathetic tone. Focus on solutions and positive resolution."
+};
+
+// Generate draft using AI
+async function generateDraft() {
+    const statusDiv = document.getElementById('statusMessage');
+    const outputDiv = document.getElementById('draftOutput');
+    const actionButtons = document.getElementById('actionButtons');
+    const generateBtn = document.getElementById('generateBtn');
+    
+    // Hide previous results
+    outputDiv.style.display = 'none';
+    actionButtons.style.display = 'none';
+    statusDiv.style.display = 'none';
+    
+    // Disable button
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generating...';
+
+    try {
+        // Get the current email body
+        const item = Office.context.mailbox.item;
+        
+        item.body.getAsync(Office.CoercionType.Text, async (result) => {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+                const originalText = result.value.trim();
+                
+                if (!originalText) {
+                    showStatus('Please write some notes in the email body first.', 'error');
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate Draft';
+                    return;
+                }
+
+                // Get selected tone
+                const tone = document.getElementById('toneSelect').value;
+                const prompt = tonePrompts[tone];
+
+                // Get API settings from localStorage
+                const apiProvider = localStorage.getItem('apiProvider') || 'openai';
+                const openaiKey = localStorage.getItem('openaiKey');
+                const claudeKey = localStorage.getItem('claudeKey');
+
+                // Check if API key exists
+                if (apiProvider === 'openai' && !openaiKey) {
+                    showStatus('Please add your OpenAI API key in Settings first.', 'error');
+                    generateBtn.disabled = false;
+                    generateBtn.textContent = 'Generate Draft';
+                    return;
+                }
+                if (apiProvider === 'claude' && !claudeKey) {

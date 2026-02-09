@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Email Drafter</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        select, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        button:hover {
+            background-color: #006cbd;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .secondary-btn {
+            background-color: #fff;
+            color: #0078d4;
+            border: 1px solid #0078d4;
+        }
+        .secondary-btn:hover {
+            background-color: #f0f0f0;
+        }
+        #draftOutput {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #0078d4;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            display: none;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+        .status.success {
+            background-color: #dff6dd;
+            color: #1e7e34;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .settings-link {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .settings-link a {
+            color: #0078d4;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>✨ Email Drafter</h2>
+        
+        <label for="toneSelect"><strong>Select Tone:</strong></label>
+        <select id="toneSelect">
+            <option value="professional">Polished Professional</option>
+            <option value="friendly">Friendly Professional</option>
+            <option value="brief">Brief & Direct</option>
+            <option value="casual">Casual</option>
+            <option value="diplomatic">Apologetic/Diplomatic</option>
+        </select>
+
+        <button id="generateBtn" onclick="generateDraft()">Generate Draft</button>
+
+        <div id="statusMessage" class="status"></div>
+
+        <div id="draftOutput"></div>
+
+        <div id="actionButtons" style="display: none;">
+            <button onclick="replaceEmail()">Replace All</button>
+            <button class="secondary-btn" onclick="insertBelow()">Insert Below</button>
+        </div>
+
+        <div class="settings-link">
+            <a href="#" onclick="showSettings(); return false;">⚙️ Settings (API Keys)</a>
+        </div>
+    </div>
+
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <script src="taskpane.js"></script>
+</body>
+</html>
