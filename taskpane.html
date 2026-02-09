@@ -21,14 +21,29 @@
         h2 {
             margin-top: 0;
             color: #333;
+            font-size: 20px;
         }
-        select, button {
+        h3 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 16px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        select, button, input[type="text"], input[type="password"] {
             width: 100%;
             padding: 10px;
-            margin: 10px 0;
+            margin: 5px 0 10px 0;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 14px;
+            box-sizing: border-box;
         }
         button {
             background-color: #0078d4;
@@ -62,6 +77,8 @@
             font-family: 'Segoe UI', sans-serif;
             line-height: 1.6;
             display: none;
+            max-height: 300px;
+            overflow-y: auto;
         }
         .status {
             margin: 10px 0;
@@ -87,54 +104,116 @@
         .settings-link a {
             color: #0078d4;
             text-decoration: none;
+            cursor: pointer;
         }
-        .category-label {
-            font-size: 11px;
-            font-weight: 600;
+        .view {
+            display: none;
+        }
+        .view.active {
+            display: block;
+        }
+        .back-link {
+            color: #0078d4;
+            text-decoration: none;
+            cursor: pointer;
+            font-size: 13px;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        .info-text {
+            font-size: 12px;
             color: #666;
-            margin-top: 15px;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>✨ Email Drafter</h2>
         
-        <label for="toneSelect"><strong>Select Style:</strong></label>
-        <select id="toneSelect">
-            <optgroup label="🤝 RELATIONSHIP / TONE">
-                <option value="professional">Professional</option>
-                <option value="friendly">Friendly</option>
-                <option value="casual">Casual</option>
-                <option value="brief">Brief</option>
-                <option value="diplomatic">Diplomatic</option>
-            </optgroup>
-            <optgroup label="⚙️ UTILITY / PERFORMANCE">
-                <option value="cleanup">Cleanup</option>
-                <option value="sales">Sales Upgrade</option>
-            </optgroup>
-            <optgroup label="🧬 PERSONAL VOICE">
-                <option value="myvoice">My Voice From Notes</option>
-            </optgroup>
-        </select>
+        <!-- MAIN VIEW -->
+        <div id="mainView" class="view active">
+            <h2>✨ Email Drafter</h2>
+            
+            <label for="toneSelect"><strong>Select Style:</strong></label>
+            <select id="toneSelect">
+                <optgroup label="🤝 RELATIONSHIP / TONE">
+                    <option value="professional">Professional</option>
+                    <option value="friendly">Friendly</option>
+                    <option value="casual">Casual</option>
+                    <option value="brief">Brief</option>
+                    <option value="diplomatic">Diplomatic</option>
+                </optgroup>
+                <optgroup label="⚙️ UTILITY / PERFORMANCE">
+                    <option value="cleanup">Cleanup</option>
+                    <option value="sales">Sales Upgrade</option>
+                </optgroup>
+                <optgroup label="🧬 PERSONAL VOICE">
+                    <option value="myvoice">My Voice From Notes</option>
+                </optgroup>
+            </select>
 
-        <button id="generateBtn" onclick="generateDraft()">Generate Draft</button>
+            <button id="generateBtn" onclick="generateDraft()">Generate Draft</button>
 
-        <div id="statusMessage" class="status"></div>
+            <div id="statusMessage" class="status"></div>
 
-        <div id="draftOutput"></div>
+            <div id="draftOutput"></div>
 
-        <div id="actionButtons" style="display: none;">
-            <button onclick="replaceEmail()">Replace All</button>
-            <button class="secondary-btn" onclick="insertBelow()">Insert Below</button>
+            <div id="actionButtons" style="display: none;">
+                <button onclick="replaceEmail()">Replace All</button>
+                <button class="secondary-btn" onclick="insertBelow()">Insert Below</button>
+            </div>
+
+            <div class="settings-link">
+                <a onclick="showSettingsView()">⚙️ Settings (API Keys)</a>
+            </div>
         </div>
 
-        <div class="settings-link">
-            <a href="#" onclick="showSettings(); return false;">⚙️ Settings (API Keys)</a>
+        <!-- SETTINGS VIEW -->
+        <div id="settingsView" class="view">
+            <a class="back-link" onclick="showMainView()">← Back</a>
+            
+            <h2>⚙️ Settings</h2>
+            
+            <label for="apiProviderSelect">API Provider:</label>
+            <select id="apiProviderSelect" onchange="updateProviderFields()">
+                <option value="openai">OpenAI</option>
+                <option value="claude">Claude (Anthropic)</option>
+            </select>
+
+            <!-- OpenAI Settings -->
+            <div id="openaiSettings">
+                <h3>OpenAI Configuration</h3>
+                
+                <label for="openaiModelSelect">Model:</label>
+                <select id="openaiModelSelect">
+                    <option value="gpt-5.2">gpt-5.2 (default)</option>
+                    <option value="custom">Other (custom)</option>
+                </select>
+                
+                <div id="customModelDiv" style="display: none;">
+                    <label for="customModelInput">Custom Model Name:</label>
+                    <input type="text" id="customModelInput" placeholder="e.g., gpt-4-turbo">
+                </div>
+                
+                <label for="openaiKeyInput">API Key:</label>
+                <input type="password" id="openaiKeyInput" placeholder="sk-...">
+                <div class="info-text">Get your key at platform.openai.com/api-keys</div>
+            </div>
+
+            <!-- Claude Settings -->
+            <div id="claudeSettings" style="display: none;">
+                <h3>Claude Configuration</h3>
+                
+                <label for="claudeKeyInput">API Key:</label>
+                <input type="password" id="claudeKeyInput" placeholder="sk-ant-...">
+                <div class="info-text">Get your key at console.anthropic.com</div>
+            </div>
+
+            <button onclick="saveSettings()" style="margin-top: 20px;">Save Settings</button>
+            
+            <div id="settingsStatus" class="status"></div>
         </div>
+
     </div>
 
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
