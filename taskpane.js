@@ -6,23 +6,23 @@ Office.onReady((info) => {
     }
 });
 
-// Tone prompts for different email styles
+// Tone prompts for different email styles - updated to not add closings
 const tonePrompts = {
-    professional: "Rewrite the following notes as a polished, professional business email. Use formal language, proper structure, and a respectful tone. Keep it clear and concise.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice. Do not add commitments, promises, or technical claims.\n\nDo not use em dashes.",
+    professional: "Rewrite the following notes as a polished, professional business email. Use formal language, proper structure, and a respectful tone. Keep it clear and concise.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice. Do not add commitments, promises, or technical claims.\n\nDo not add any closing lines (like 'Thanks', 'Best regards', etc.) - the sender has their own signature.\n\nDo not use em dashes.",
     
-    friendly: "Rewrite the following notes as a warm, friendly professional email. Be approachable and personable while maintaining professionalism. Use a conversational but business-appropriate tone.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice.\n\nDo not use em dashes.",
+    friendly: "Rewrite the following notes as a warm, friendly professional email. Be approachable and personable while maintaining professionalism. Use a conversational but business-appropriate tone.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice.\n\nDo not add any closing lines (like 'Thanks', 'Best regards', etc.) - the sender has their own signature.\n\nDo not use em dashes.",
     
-    casual: "Rewrite the following notes as a casual, relaxed email. Use a conversational tone as if writing to a colleague or familiar contact. Keep it friendly and informal while remaining appropriate for business communication.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice.\n\nDo not use em dashes.",
+    casual: "Rewrite the following notes as a casual, relaxed email. Use a conversational tone as if writing to a colleague or familiar contact. Keep it friendly and informal while remaining appropriate for business communication.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice.\n\nDo not add any closing lines (like 'Thanks', 'Best regards', etc.) - the sender has their own signature.\n\nDo not use em dashes.",
     
-    brief: "Rewrite the following notes as a brief, direct email. Get straight to the point. Use short sentences and minimal pleasantries. Be clear and action-oriented without sounding abrupt or curt.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice.\n\nDo not use em dashes.",
+    brief: "Rewrite the following notes as a brief, direct email. Get straight to the point. Use short sentences and minimal pleasantries. Be clear and action-oriented without sounding abrupt or curt.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice.\n\nDo not add any closing lines (like 'Thanks', 'Best regards', etc.) - the sender has their own signature.\n\nDo not use em dashes.",
     
-    diplomatic: "Rewrite the following notes as a diplomatic, tactful email. Handle the situation delicately, acknowledge concerns when appropriate, and maintain a professional and empathetic tone. Focus on solutions and constructive next steps.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice. Do not admit fault or liability unless explicitly stated in the notes.\n\nDo not use em dashes.",
+    diplomatic: "Rewrite the following notes as a diplomatic, tactful email. Handle the situation delicately, acknowledge concerns when appropriate, and maintain a professional and empathetic tone. Focus on solutions and constructive next steps.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice. Do not admit fault or liability unless explicitly stated in the notes.\n\nDo not add any closing lines (like 'Thanks', 'Best regards', etc.) - the sender has their own signature.\n\nDo not use em dashes.",
     
-    cleanup: "Clean up the following notes or draft email.\n\nFix grammar and spelling.\nRemove unnecessary fluff.\nImprove readability and flow.\nNormalize formatting.\nKeep the message concise.\n\nDo not change the intent, structure, or meaning of the content. Do not introduce new phrasing that alters emphasis or tone. Preserve original factual content and the sender's voice.\n\nDo not use em dashes.",
+    cleanup: "Clean up the following notes or draft email.\n\nFix grammar and spelling.\nRemove unnecessary fluff.\nImprove readability and flow.\nNormalize formatting.\nKeep the message concise.\n\nDo not change the intent, structure, or meaning of the content. Do not introduce new phrasing that alters emphasis or tone. Preserve original factual content and the sender's voice.\n\nDo not add any closing lines (like 'Thanks', 'Best regards', etc.) - the sender has their own signature.\n\nDo not use em dashes.",
     
-    sales: "Rewrite the following notes as a professional, customer-facing business email.\n\nImprove clarity, persuasion, and engagement while maintaining credibility and technical accuracy. Keep the tone confident, practical, and relationship-driven, not marketing-oriented or promotional.\n\nPreserve original meaning and factual content. Do not invent specifications, performance claims, or commitments. Maintain the sender's voice.\n\nDo not use em dashes.",
+    sales: "Rewrite the following notes as a professional, customer-facing business email.\n\nImprove clarity, persuasion, and engagement while maintaining credibility and technical accuracy. Keep the tone confident, practical, and relationship-driven, not marketing-oriented or promotional.\n\nPreserve original meaning and factual content. Do not invent specifications, performance claims, or commitments. Maintain the sender's voice.\n\nDo not add any closing lines (like 'Thanks', 'Best regards', etc.) - the sender has their own signature.\n\nDo not use em dashes.",
     
-    myvoice: "Convert the following rough notes, shorthand, or bullet points into a complete professional email written in the sender's natural voice.\n\nGuidelines:\n• Write in a style that is professional but conversational.\n• Be direct, clear, and relationship-focused.\n• Avoid corporate jargon, marketing language, or overly formal phrasing.\n• Maintain technical credibility without sounding like a brochure.\n• Keep the message natural and easy to read.\n\nContent Rules:\n• Preserve original meaning and factual content.\n• Do not invent details, specifications, or commitments.\n• If notes are vague, keep language appropriately general and safe.\n\nStructure:\n• Organize the message into a logical email flow.\n• Add transitions and readability improvements where needed.\n• Keep length appropriate to the content. Do not over-expand.\n\nDo not use em dashes."
+    myvoice: "Convert the following rough notes, shorthand, or bullet points into a complete professional email written in the sender's natural voice.\n\nGuidelines:\n• Write in a style that is professional but conversational.\n• Be direct, clear, and relationship-focused.\n• Avoid corporate jargon, marketing language, or overly formal phrasing.\n• Maintain technical credibility without sounding like a brochure.\n• Keep the message natural and easy to read.\n\nContent Rules:\n• Preserve original meaning and factual content.\n• Do not invent details, specifications, or commitments.\n• If notes are vague, keep language appropriately general and safe.\n\nStructure:\n• Organize the message into a logical email flow.\n• Add transitions and readability improvements where needed.\n• Keep length appropriate to the content. Do not over-expand.\n\nDo not add any closing lines (like 'Thanks', 'Best regards', etc.) - the sender has their own signature.\n\nDo not use em dashes."
 };
 
 // Subject line prompts (only used when subject is empty)
@@ -176,16 +176,71 @@ function showSettingsStatus(message, type) {
     }, 3000);
 }
 
-// Strip signature from email body
-function stripSignature(text) {
+// Extract text content from HTML, preserving structure
+function htmlToText(html) {
+    // Create a temporary div to parse HTML
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    
+    // Convert common HTML elements to text equivalents
+    const brs = temp.querySelectorAll('br');
+    brs.forEach(br => br.replaceWith('\n'));
+    
+    const ps = temp.querySelectorAll('p');
+    ps.forEach(p => {
+        const text = p.textContent;
+        p.replaceWith(text + '\n\n');
+    });
+    
+    const divs = temp.querySelectorAll('div');
+    divs.forEach(div => {
+        const text = div.textContent;
+        div.replaceWith(text + '\n');
+    });
+    
+    return temp.textContent.trim();
+}
+
+// Convert plain text to simple HTML
+function textToHtml(text) {
+    // Escape HTML special characters
+    text = text.replace(/&/g, '&amp;')
+               .replace(/</g, '&lt;')
+               .replace(/>/g, '&gt;');
+    
+    // Convert line breaks to <br> and double line breaks to paragraphs
+    const paragraphs = text.split('\n\n');
+    const html = paragraphs.map(para => {
+        const lines = para.split('\n').join('<br>');
+        return '<p>' + lines + '</p>';
+    }).join('');
+    
+    return html;
+}
+
+// Strip signature and everything after from HTML
+function stripSignatureFromHtml(html) {
     const signatureMarker = "Best regards,";
+    
+    // Convert to text to find the marker
+    const text = htmlToText(html);
     const index = text.indexOf(signatureMarker);
     
-    if (index !== -1) {
-        return text.substring(0, index).trim();
+    if (index === -1) {
+        return { messageHtml: html, remainderHtml: '' };
     }
     
-    return text;
+    // Find the position in the original HTML
+    // This is approximate - we'll use a different approach
+    // We'll split the HTML at the signature marker
+    const markerIndex = html.indexOf(signatureMarker);
+    if (markerIndex !== -1) {
+        const messageHtml = html.substring(0, markerIndex);
+        const remainderHtml = html.substring(markerIndex);
+        return { messageHtml, remainderHtml };
+    }
+    
+    return { messageHtml: html, remainderHtml: '' };
 }
 
 // Generate draft using AI
@@ -214,20 +269,26 @@ window.generateDraft = async function() {
                               subjectResult.value && 
                               subjectResult.value.trim().length > 0;
             
-            // Get email body
-            item.body.getAsync(Office.CoercionType.Text, async (bodyResult) => {
+            // Get email body as HTML
+            item.body.getAsync(Office.CoercionType.Html, async (bodyResult) => {
                 if (bodyResult.status === Office.AsyncResultStatus.Succeeded) {
-                    let originalText = bodyResult.value.trim();
+                    const fullHtml = bodyResult.value;
                     
-                    // Strip signature
-                    originalText = stripSignature(originalText);
+                    // Strip signature and everything after
+                    const { messageHtml, remainderHtml } = stripSignatureFromHtml(fullHtml);
                     
-                    if (!originalText) {
+                    // Convert message HTML to plain text for AI
+                    const messageText = htmlToText(messageHtml).trim();
+                    
+                    if (!messageText) {
                         showStatus('Please write some notes in the email body first.', 'error');
                         generateBtn.disabled = false;
                         generateBtn.textContent = 'Generate Draft';
                         return;
                     }
+
+                    // Store the remainder for later
+                    window.emailRemainder = remainderHtml;
 
                     // Get selected tone
                     const tone = document.getElementById('toneSelect').value;
@@ -260,9 +321,9 @@ window.generateDraft = async function() {
                     // Call the appropriate API
                     let draftText;
                     if (apiProvider === 'openai') {
-                        draftText = await callOpenAI(prompt, originalText, openaiKey);
+                        draftText = await callOpenAI(prompt, messageText, openaiKey);
                     } else {
-                        draftText = await callClaude(prompt, originalText, claudeKey);
+                        draftText = await callClaude(prompt, messageText, claudeKey);
                     }
 
                     // Check if response includes a subject line
@@ -273,7 +334,7 @@ window.generateDraft = async function() {
                         generatedSubject = subjectLine.replace('Subject:', '').trim();
                         
                         // Remove subject line from body
-                        draftText = lines.slice(2).join('\n').trim(); // Skip subject and blank line
+                        draftText = lines.slice(2).join('\n').trim();
                         
                         // Set the subject
                         item.subject.setAsync(generatedSubject);
@@ -365,37 +426,23 @@ async function callClaude(systemPrompt, userText, apiKey) {
     return data.content[0].text;
 }
 
-// Replace entire email body with draft (preserves signature)
+// Replace email body with draft (preserves signature and email history)
 window.replaceEmail = function() {
     const draftText = document.getElementById('draftOutput').textContent;
     const item = Office.context.mailbox.item;
     
-    // Get current body to preserve signature
-    item.body.getAsync(Office.CoercionType.Text, (result) => {
+    // Convert draft text to HTML
+    const draftHtml = textToHtml(draftText);
+    
+    // Combine with the stored remainder (signature + email history)
+    const remainder = window.emailRemainder || '';
+    const newHtml = draftHtml + remainder;
+    
+    item.body.setAsync(newHtml, { coercionType: Office.CoercionType.Html }, (result) => {
         if (result.status === Office.AsyncResultStatus.Succeeded) {
-            const currentBody = result.value;
-            const signatureMarker = "Best regards,";
-            const signatureIndex = currentBody.indexOf(signatureMarker);
-            
-            let newBody;
-            if (signatureIndex !== -1) {
-                // Preserve signature
-                const signature = currentBody.substring(signatureIndex);
-                newBody = draftText + '\n\n' + signature;
-            } else {
-                // No signature found, just use draft
-                newBody = draftText;
-            }
-            
-            item.body.setAsync(newBody, { coercionType: Office.CoercionType.Text }, (result2) => {
-                if (result2.status === Office.AsyncResultStatus.Succeeded) {
-                    showStatus('Email replaced successfully!', 'success');
-                } else {
-                    showStatus('Error replacing email: ' + result2.error.message, 'error');
-                }
-            });
+            showStatus('Email replaced successfully!', 'success');
         } else {
-            showStatus('Error reading email body: ' + result.error.message, 'error');
+            showStatus('Error replacing email: ' + result.error.message, 'error');
         }
     });
 };
@@ -405,10 +452,13 @@ window.insertBelow = function() {
     const draftText = document.getElementById('draftOutput').textContent;
     const item = Office.context.mailbox.item;
     
-    item.body.getAsync(Office.CoercionType.Text, (result) => {
+    item.body.getAsync(Office.CoercionType.Html, (result) => {
         if (result.status === Office.AsyncResultStatus.Succeeded) {
-            const combined = result.value + '\n\n---\n\n' + draftText;
-            item.body.setAsync(combined, { coercionType: Office.CoercionType.Text }, (result2) => {
+            const draftHtml = textToHtml(draftText);
+            const separator = '<p>---</p>';
+            const combined = result.value + separator + draftHtml;
+            
+            item.body.setAsync(combined, { coercionType: Office.CoercionType.Html }, (result2) => {
                 if (result2.status === Office.AsyncResultStatus.Succeeded) {
                     showStatus('Draft inserted below!', 'success');
                 } else {
