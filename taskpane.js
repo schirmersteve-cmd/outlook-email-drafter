@@ -2,6 +2,7 @@
 Office.onReady((info) => {
     if (info.host === Office.HostType.Outlook) {
         console.log("Email Drafter loaded successfully");
+        loadSettings();
     }
 });
 
@@ -23,6 +24,125 @@ const tonePrompts = {
     
     myvoice: "Convert the following rough notes, shorthand, or bullet points into a complete professional email written in the sender's natural voice.\n\nGuidelines:\n• Write in a style that is professional but conversational.\n• Be clear, direct, and relationship-focused.\n• Maintain technical credibility without sounding overly formal or marketing-driven.\n• Keep the message natural and easy to read.\n\nContent Rules:\n• Preserve original meaning and factual content.\n• Do not invent details, specifications, or commitments.\n• If notes are vague, keep language appropriately general and safe.\n\nStructure:\n• Organize the message into a logical email flow.\n• Add transitions and readability improvements where needed.\n• Keep length appropriate to the content (do not over-expand)."
 };
+
+// View Management
+window.showSettingsView = function() {
+    document.getElementById('mainView').classList.remove('active');
+    document.getElementById('settingsView').classList.add('active');
+};
+
+window.showMainView = function() {
+    document.getElementById('settingsView').classList.remove('active');
+    document.getElementById('mainView').classList.add('active');
+};
+
+// Load saved settings into the settings form
+function loadSettings() {
+    const apiProvider = localStorage.getItem('apiProvider') || 'openai';
+    const openaiKey = localStorage.getItem('openaiKey') || '';
+    const claudeKey = localStorage.getItem('claudeKey') || '';
+    const openaiModel = localStorage.getItem('openaiModel') || 'gpt-5.2';
+    
+    document.getElementById('apiProviderSelect').value = apiProvider;
+    document.getElementById('openaiKeyInput').value = openaiKey;
+    document.getElementById('claudeKeyInput').value = claudeKey;
+    
+    if (openaiModel === 'gpt-5.2') {
+        document.getElementById('openaiModelSelect').value = 'gpt-5.2';
+    } else {
+        document.getElementById('openaiModelSelect').value = 'custom';
+        document.getElementById('customModelInput').value = openaiModel;
+        document.getElementById('customModelDiv').style.display = 'block';
+    }
+    
+    updateProviderFields();
+}
+
+// Update provider-specific fields
+window.updateProviderFields = function() {
+    const provider = document.getElementById('apiProviderSelect').value;
+    
+    if (provider === 'openai') {
+        document.getElementById('openaiSettings').style.display = 'block';
+        document.getElementById('claudeSettings').style.display = 'none';
+    } else {
+        document.getElementById('openaiSettings').style.display = 'none';
+        document.getElementById('claudeSettings').style.display = 'block';
+    }
+};
+
+// Handle model selection
+document.addEventListener('DOMContentLoaded', function() {
+    const modelSelect = document.getElementById('openaiModelSelect');
+    if (modelSelect) {
+        modelSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                document.getElementById('customModelDiv').style.display = 'block';
+            } else {
+                document.getElementById('customModelDiv').style.display = 'none';
+            }
+        });
+    }
+});
+
+// Save settings
+window.saveSettings = function() {
+    const provider = document.getElementById('apiProviderSelect').value;
+    const statusDiv = document.getElementById('settingsStatus');
+    
+    localStorage.setItem('apiProvider', provider);
+    
+    if (provider === 'openai') {
+        const modelSelect = document.getElementById('openaiModelSelect').value;
+        let model = 'gpt-5.2';
+        
+        if (modelSelect === 'custom') {
+            const customModel = document.getElementById('customModelInput').value.trim();
+            if (!customModel) {
+                showSettingsStatus('Please enter a custom model name', 'error');
+                return;
+            }
+            model = customModel;
+        } else {
+            model = modelSelect;
+        }
+        
+        const apiKey = document.getElementById('openaiKeyInput').value.trim();
+        if (!apiKey) {
+            showSettingsStatus('Please enter your OpenAI API key', 'error');
+            return;
+        }
+        
+        localStorage.setItem('openaiModel', model);
+        localStorage.setItem('openaiKey', apiKey);
+        showSettingsStatus('OpenAI settings saved! Model: ' + model, 'success');
+        
+    } else {
+        const apiKey = document.getElementById('claudeKeyInput').value.trim();
+        if (!apiKey) {
+            showSettingsStatus('Please enter your Claude API key', 'error');
+            return;
+        }
+        
+        localStorage.setItem('claudeKey', apiKey);
+        showSettingsStatus('Claude settings saved!', 'success');
+    }
+    
+    setTimeout(() => {
+        showMainView();
+    }, 1500);
+};
+
+function showSettingsStatus(message, type) {
+    const statusDiv = document.getElementById('settingsStatus');
+    statusDiv.textContent = message;
+    statusDiv.className = 'status ' + type;
+    statusDiv.style.display = 'block';
+    
+    setTimeout(() => {
+        statusDiv.style.display = 'none';
+    }, 3000);
+}
 
 // Generate draft using AI
 window.generateDraft = async function() {
@@ -206,52 +326,3 @@ function showStatus(message, type) {
     statusDiv.className = 'status ' + type;
     statusDiv.style.display = 'block';
 }
-
-// Show settings
-window.showSettings = function() {
-    const apiProvider = localStorage.getItem('apiProvider') || 'openai';
-    const openaiKey = localStorage.getItem('openaiKey') || '';
-    const claudeKey = localStorage.getItem('claudeKey') || '';
-    const openaiModel = localStorage.getItem('openaiModel') || 'gpt-5.2';
-    
-    // Step 1: Choose API provider
-    const newProvider = prompt('API Provider (enter "openai" or "claude"):', apiProvider);
-    if (!newProvider || (newProvider !== 'openai' && newProvider !== 'claude')) {
-        return; // User cancelled or invalid input
-    }
-    localStorage.setItem('apiProvider', newProvider);
-    
-    // Step 2: Configure OpenAI settings
-    if (newProvider === 'openai') {
-        // Choose model
-        const modelChoice = prompt(
-            'Choose OpenAI model:\n1 = gpt-5.2 (default)\n2 = Other (custom)\n\nEnter 1 or 2:',
-            '1'
-        );
-        
-        let selectedModel = 'gpt-5.2';
-        if (modelChoice === '2') {
-            const customModel = prompt('Enter custom model name:', openaiModel);
-            if (customModel) {
-                selectedModel = customModel.trim();
-            }
-        }
-        localStorage.setItem('openaiModel', selectedModel);
-        
-        // Enter API key
-        const newOpenAIKey = prompt('Enter your OpenAI API Key:', openaiKey);
-        if (newOpenAIKey) {
-            localStorage.setItem('openaiKey', newOpenAIKey.trim());
-            alert('OpenAI settings saved!\nModel: ' + selectedModel);
-        }
-    }
-    
-    // Step 3: Configure Claude settings
-    if (newProvider === 'claude') {
-        const newClaudeKey = prompt('Enter your Claude API Key:', claudeKey);
-        if (newClaudeKey) {
-            localStorage.setItem('claudeKey', newClaudeKey.trim());
-            alert('Claude API key saved!');
-        }
-    }
-};
