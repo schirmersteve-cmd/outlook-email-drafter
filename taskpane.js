@@ -7,11 +7,21 @@ Office.onReady((info) => {
 
 // Tone prompts for different email styles
 const tonePrompts = {
-    professional: "Rewrite the following notes as a polished, professional business email. Use formal language, proper structure, and maintain a respectful tone. Keep it clear and concise.",
-    friendly: "Rewrite the following notes as a warm, friendly professional email. Be approachable and personable while maintaining professionalism. Use a conversational but business-appropriate tone.",
-    brief: "Rewrite the following notes as a brief, direct email. Get straight to the point. Use short sentences and minimal pleasantries. Be clear and action-oriented.",
-    casual: "Rewrite the following notes as a casual, relaxed email. Use a conversational tone as if writing to a colleague or familiar contact. Keep it friendly and informal.",
-    diplomatic: "Rewrite the following notes as a diplomatic, apologetic email. Handle the situation delicately, acknowledge any issues, and maintain a professional yet empathetic tone. Focus on solutions and positive resolution."
+    professional: "Rewrite the following notes as a polished, professional business email. Use formal language, proper structure, and a respectful tone. Keep it clear and concise.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice. Do not add commitments, promises, or technical claims.",
+    
+    friendly: "Rewrite the following notes as a warm, friendly professional email. Be approachable and personable while maintaining professionalism. Use a conversational but business-appropriate tone.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice.",
+    
+    casual: "Rewrite the following notes as a casual, relaxed email. Use a conversational tone as if writing to a colleague or familiar contact. Keep it friendly and informal while remaining appropriate for business communication.\n\nPreserve original meaning and factual content. Do not invent details.",
+    
+    brief: "Rewrite the following notes as a brief, direct email. Get straight to the point. Use short sentences and minimal pleasantries. Be clear and action-oriented.\n\nPreserve original meaning and factual content. Do not invent details.",
+    
+    diplomatic: "Rewrite the following notes as a diplomatic, tactful email. Handle the situation delicately, acknowledge concerns when appropriate, and maintain a professional and empathetic tone. Focus on solutions and constructive next steps.\n\nPreserve original meaning and factual content. Do not invent details. Do not admit fault or liability unless explicitly stated in the notes.",
+    
+    cleanup: "Clean up the following notes or draft email.\n\nFix grammar and spelling.\nRemove unnecessary fluff.\nImprove readability and flow.\nNormalize formatting.\nKeep the message concise.\n\nDo NOT significantly change tone or meaning. Preserve original factual content.",
+    
+    sales: "Rewrite the following notes as a professional, customer-facing business email.\n\nImprove clarity, persuasion, and engagement while maintaining credibility and technical accuracy. Keep tone confident but not pushy.\n\nPreserve original meaning and factual content. Do not invent specifications, performance claims, or commitments.",
+    
+    myvoice: "Convert the following rough notes, shorthand, or bullet points into a complete professional email written in the sender's natural voice.\n\nGuidelines:\n• Write in a style that is professional but conversational.\n• Be clear, direct, and relationship-focused.\n• Maintain technical credibility without sounding overly formal or marketing-driven.\n• Keep the message natural and easy to read.\n\nContent Rules:\n• Preserve original meaning and factual content.\n• Do not invent details, specifications, or commitments.\n• If notes are vague, keep language appropriately general and safe.\n\nStructure:\n• Organize the message into a logical email flow.\n• Add transitions and readability improvements where needed.\n• Keep length appropriate to the content (do not over-expand)."
 };
 
 // Generate draft using AI
@@ -99,6 +109,8 @@ window.generateDraft = async function() {
 
 // Call OpenAI API
 async function callOpenAI(systemPrompt, userText, apiKey) {
+    const selectedModel = localStorage.getItem('openaiModel') || 'gpt-5.2';
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -106,7 +118,7 @@ async function callOpenAI(systemPrompt, userText, apiKey) {
             'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-            model: 'gpt-4o-mini',
+            model: selectedModel,
             messages: [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userText }
@@ -126,6 +138,8 @@ async function callOpenAI(systemPrompt, userText, apiKey) {
 
 // Call Claude API
 async function callClaude(systemPrompt, userText, apiKey) {
+    const selectedModel = localStorage.getItem('claudeModel') || 'claude-3-5-sonnet-20241022';
+    
     const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -134,7 +148,7 @@ async function callClaude(systemPrompt, userText, apiKey) {
             'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-            model: 'claude-3-5-sonnet-20241022',
+            model: selectedModel,
             max_tokens: 1024,
             system: systemPrompt,
             messages: [
@@ -193,29 +207,50 @@ function showStatus(message, type) {
     statusDiv.style.display = 'block';
 }
 
-// Show settings (placeholder for now)
+// Show settings
 window.showSettings = function() {
     const apiProvider = localStorage.getItem('apiProvider') || 'openai';
     const openaiKey = localStorage.getItem('openaiKey') || '';
     const claudeKey = localStorage.getItem('claudeKey') || '';
+    const openaiModel = localStorage.getItem('openaiModel') || 'gpt-5.2';
     
+    // Step 1: Choose API provider
     const newProvider = prompt('API Provider (enter "openai" or "claude"):', apiProvider);
-    if (newProvider && (newProvider === 'openai' || newProvider === 'claude')) {
-        localStorage.setItem('apiProvider', newProvider);
+    if (!newProvider || (newProvider !== 'openai' && newProvider !== 'claude')) {
+        return; // User cancelled or invalid input
     }
+    localStorage.setItem('apiProvider', newProvider);
     
-    if (newProvider === 'openai' || apiProvider === 'openai') {
+    // Step 2: Configure OpenAI settings
+    if (newProvider === 'openai') {
+        // Choose model
+        const modelChoice = prompt(
+            'Choose OpenAI model:\n1 = gpt-5.2 (default)\n2 = Other (custom)\n\nEnter 1 or 2:',
+            '1'
+        );
+        
+        let selectedModel = 'gpt-5.2';
+        if (modelChoice === '2') {
+            const customModel = prompt('Enter custom model name:', openaiModel);
+            if (customModel) {
+                selectedModel = customModel.trim();
+            }
+        }
+        localStorage.setItem('openaiModel', selectedModel);
+        
+        // Enter API key
         const newOpenAIKey = prompt('Enter your OpenAI API Key:', openaiKey);
         if (newOpenAIKey) {
-            localStorage.setItem('openaiKey', newOpenAIKey);
-            alert('OpenAI API key saved!');
+            localStorage.setItem('openaiKey', newOpenAIKey.trim());
+            alert('OpenAI settings saved!\nModel: ' + selectedModel);
         }
     }
     
-    if (newProvider === 'claude' || apiProvider === 'claude') {
+    // Step 3: Configure Claude settings
+    if (newProvider === 'claude') {
         const newClaudeKey = prompt('Enter your Claude API Key:', claudeKey);
         if (newClaudeKey) {
-            localStorage.setItem('claudeKey', newClaudeKey);
+            localStorage.setItem('claudeKey', newClaudeKey.trim());
             alert('Claude API key saved!');
         }
     }
