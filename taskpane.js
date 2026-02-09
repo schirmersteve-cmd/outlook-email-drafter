@@ -365,16 +365,37 @@ async function callClaude(systemPrompt, userText, apiKey) {
     return data.content[0].text;
 }
 
-// Replace entire email body with draft
+// Replace entire email body with draft (preserves signature)
 window.replaceEmail = function() {
     const draftText = document.getElementById('draftOutput').textContent;
     const item = Office.context.mailbox.item;
     
-    item.body.setAsync(draftText, { coercionType: Office.CoercionType.Text }, (result) => {
+    // Get current body to preserve signature
+    item.body.getAsync(Office.CoercionType.Text, (result) => {
         if (result.status === Office.AsyncResultStatus.Succeeded) {
-            showStatus('Email replaced successfully!', 'success');
+            const currentBody = result.value;
+            const signatureMarker = "Best regards,";
+            const signatureIndex = currentBody.indexOf(signatureMarker);
+            
+            let newBody;
+            if (signatureIndex !== -1) {
+                // Preserve signature
+                const signature = currentBody.substring(signatureIndex);
+                newBody = draftText + '\n\n' + signature;
+            } else {
+                // No signature found, just use draft
+                newBody = draftText;
+            }
+            
+            item.body.setAsync(newBody, { coercionType: Office.CoercionType.Text }, (result2) => {
+                if (result2.status === Office.AsyncResultStatus.Succeeded) {
+                    showStatus('Email replaced successfully!', 'success');
+                } else {
+                    showStatus('Error replacing email: ' + result2.error.message, 'error');
+                }
+            });
         } else {
-            showStatus('Error replacing email: ' + result.error.message, 'error');
+            showStatus('Error reading email body: ' + result.error.message, 'error');
         }
     });
 };
