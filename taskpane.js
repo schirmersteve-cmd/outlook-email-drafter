@@ -6,7 +6,7 @@ Office.onReady((info) => {
     }
 });
 
-// Tone prompts for different email styles - updated to not add closings
+// Tone prompts for different email styles
 const tonePrompts = {
     professional: "Rewrite the following notes as a polished, professional business email. Use formal language, proper structure, and a respectful tone. Keep it clear and concise.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice. Do not add commitments, promises, or technical claims.\n\nDo not add any closing lines (like 'Thanks', 'Best regards', etc.) - the sender has their own signature.\n\nDo not use em dashes.",
     
@@ -176,71 +176,16 @@ function showSettingsStatus(message, type) {
     }, 3000);
 }
 
-// Extract text content from HTML, preserving structure
-function htmlToText(html) {
-    // Create a temporary div to parse HTML
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
-    
-    // Convert common HTML elements to text equivalents
-    const brs = temp.querySelectorAll('br');
-    brs.forEach(br => br.replaceWith('\n'));
-    
-    const ps = temp.querySelectorAll('p');
-    ps.forEach(p => {
-        const text = p.textContent;
-        p.replaceWith(text + '\n\n');
-    });
-    
-    const divs = temp.querySelectorAll('div');
-    divs.forEach(div => {
-        const text = div.textContent;
-        div.replaceWith(text + '\n');
-    });
-    
-    return temp.textContent.trim();
-}
-
-// Convert plain text to simple HTML
-function textToHtml(text) {
-    // Escape HTML special characters
-    text = text.replace(/&/g, '&amp;')
-               .replace(/</g, '&lt;')
-               .replace(/>/g, '&gt;');
-    
-    // Convert line breaks to <br> and double line breaks to paragraphs
-    const paragraphs = text.split('\n\n');
-    const html = paragraphs.map(para => {
-        const lines = para.split('\n').join('<br>');
-        return '<p>' + lines + '</p>';
-    }).join('');
-    
-    return html;
-}
-
-// Strip signature and everything after from HTML
-function stripSignatureFromHtml(html) {
+// Strip signature from email body (plain text)
+function stripSignature(text) {
     const signatureMarker = "Best regards,";
-    
-    // Convert to text to find the marker
-    const text = htmlToText(html);
     const index = text.indexOf(signatureMarker);
     
-    if (index === -1) {
-        return { messageHtml: html, remainderHtml: '' };
+    if (index !== -1) {
+        return text.substring(0, index).trim();
     }
     
-    // Find the position in the original HTML
-    // This is approximate - we'll use a different approach
-    // We'll split the HTML at the signature marker
-    const markerIndex = html.indexOf(signatureMarker);
-    if (markerIndex !== -1) {
-        const messageHtml = html.substring(0, markerIndex);
-        const remainderHtml = html.substring(markerIndex);
-        return { messageHtml, remainderHtml };
-    }
-    
-    return { messageHtml: html, remainderHtml: '' };
+    return text;
 }
 
 // Generate draft using AI
@@ -269,26 +214,20 @@ window.generateDraft = async function() {
                               subjectResult.value && 
                               subjectResult.value.trim().length > 0;
             
-            // Get email body as HTML
-            item.body.getAsync(Office.CoercionType.Html, async (bodyResult) => {
+            // Get email body as plain text
+            item.body.getAsync(Office.CoercionType.Text, async (bodyResult) => {
                 if (bodyResult.status === Office.AsyncResultStatus.Succeeded) {
-                    const fullHtml = bodyResult.value;
+                    let originalText = bodyResult.value.trim();
                     
-                    // Strip signature and everything after
-                    const { messageHtml, remainderHtml } = stripSignatureFromHtml(fullHtml);
+                    // Strip signature
+                    originalText = stripSignature(originalText);
                     
-                    // Convert message HTML to plain text for AI
-                    const messageText = htmlToText(messageHtml).trim();
-                    
-                    if (!messageText) {
+                    if (!originalText) {
                         showStatus('Please write some notes in the email body first.', 'error');
                         generateBtn.disabled = false;
                         generateBtn.textContent = 'Generate Draft';
                         return;
                     }
-
-                    // Store the remainder for later
-                    window.emailRemainder = remainderHtml;
 
                     // Get selected tone
                     const tone = document.getElementById('toneSelect').value;
@@ -321,9 +260,9 @@ window.generateDraft = async function() {
                     // Call the appropriate API
                     let draftText;
                     if (apiProvider === 'openai') {
-                        draftText = await callOpenAI(prompt, messageText, openaiKey);
+                        draftText = await callOpenAI(prompt, originalText, openaiKey);
                     } else {
-                        draftText = await callClaude(prompt, messageText, claudeKey);
+                        draftText = await callClaude(prompt, originalText, claudeKey);
                     }
 
                     // Check if response includes a subject line
@@ -426,23 +365,38 @@ async function callClaude(systemPrompt, userText, apiKey) {
     return data.content[0].text;
 }
 
-// Replace email body with draft (preserves signature and email history)
+// Replace email body with draft - only replaces text before signature
 window.replaceEmail = function() {
     const draftText = document.getElementById('draftOutput').textContent;
     const item = Office.context.mailbox.item;
     
-    // Convert draft text to HTML
-    const draftHtml = textToHtml(draftText);
-    
-    // Combine with the stored remainder (signature + email history)
-    const remainder = window.emailRemainder || '';
-    const newHtml = draftHtml + remainder;
-    
-    item.body.setAsync(newHtml, { coercionType: Office.CoercionType.Html }, (result) => {
+    // Get current body to preserve everything after signature
+    item.body.getAsync(Office.CoercionType.Text, (result) => {
         if (result.status === Office.AsyncResultStatus.Succeeded) {
-            showStatus('Email replaced successfully!', 'success');
+            const currentBody = result.value;
+            const signatureMarker = "Best regards,";
+            const signatureIndex = currentBody.indexOf(signatureMarker);
+            
+            let newBody;
+            if (signatureIndex !== -1) {
+                // Preserve everything from signature onward
+                const everythingAfter = currentBody.substring(signatureIndex);
+                newBody = draftText + '\n\n' + everythingAfter;
+            } else {
+                // No signature found, just use draft
+                newBody = draftText;
+            }
+            
+            // Set as plain text to avoid formatting changes
+            item.body.setAsync(newBody, { coercionType: Office.CoercionType.Text }, (result2) => {
+                if (result2.status === Office.AsyncResultStatus.Succeeded) {
+                    showStatus('Email replaced successfully!', 'success');
+                } else {
+                    showStatus('Error replacing email: ' + result2.error.message, 'error');
+                }
+            });
         } else {
-            showStatus('Error replacing email: ' + result.error.message, 'error');
+            showStatus('Error reading email body: ' + result.error.message, 'error');
         }
     });
 };
@@ -452,13 +406,10 @@ window.insertBelow = function() {
     const draftText = document.getElementById('draftOutput').textContent;
     const item = Office.context.mailbox.item;
     
-    item.body.getAsync(Office.CoercionType.Html, (result) => {
+    item.body.getAsync(Office.CoercionType.Text, (result) => {
         if (result.status === Office.AsyncResultStatus.Succeeded) {
-            const draftHtml = textToHtml(draftText);
-            const separator = '<p>---</p>';
-            const combined = result.value + separator + draftHtml;
-            
-            item.body.setAsync(combined, { coercionType: Office.CoercionType.Html }, (result2) => {
+            const combined = result.value + '\n\n---\n\n' + draftText;
+            item.body.setAsync(combined, { coercionType: Office.CoercionType.Text }, (result2) => {
                 if (result2.status === Office.AsyncResultStatus.Succeeded) {
                     showStatus('Draft inserted below!', 'success');
                 } else {
