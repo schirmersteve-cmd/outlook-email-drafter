@@ -192,6 +192,7 @@ function stripSignature(text) {
 window.generateDraft = async function() {
     const statusDiv = document.getElementById('statusMessage');
     const outputDiv = document.getElementById('draftOutput');
+    const draftTextarea = document.getElementById('draftTextarea');
     const actionButtons = document.getElementById('actionButtons');
     const generateBtn = document.getElementById('generateBtn');
     
@@ -279,8 +280,8 @@ window.generateDraft = async function() {
                         item.subject.setAsync(generatedSubject);
                     }
 
-                    // Display the draft
-                    outputDiv.textContent = draftText;
+                    // Display the draft in the textarea
+                    draftTextarea.value = draftText;
                     outputDiv.style.display = 'block';
                     actionButtons.style.display = 'block';
                     
@@ -365,58 +366,30 @@ async function callClaude(systemPrompt, userText, apiKey) {
     return data.content[0].text;
 }
 
-// Replace email body with draft - only replaces text before signature
-window.replaceEmail = function() {
-    const draftText = document.getElementById('draftOutput').textContent;
+// Replace selected text with draft
+window.replaceSelection = function() {
+    const draftText = document.getElementById('draftTextarea').value;
     const item = Office.context.mailbox.item;
     
-    // Get current body to preserve everything after signature
-    item.body.getAsync(Office.CoercionType.Text, (result) => {
+    // Use setSelectedDataAsync to replace whatever the user has selected
+    item.body.setSelectedDataAsync(draftText, { coercionType: Office.CoercionType.Text }, (result) => {
         if (result.status === Office.AsyncResultStatus.Succeeded) {
-            const currentBody = result.value;
-            const signatureMarker = "Best regards,";
-            const signatureIndex = currentBody.indexOf(signatureMarker);
-            
-            let newBody;
-            if (signatureIndex !== -1) {
-                // Preserve everything from signature onward
-                const everythingAfter = currentBody.substring(signatureIndex);
-                newBody = draftText + '\n\n' + everythingAfter;
-            } else {
-                // No signature found, just use draft
-                newBody = draftText;
-            }
-            
-            // Set as plain text to avoid formatting changes
-            item.body.setAsync(newBody, { coercionType: Office.CoercionType.Text }, (result2) => {
-                if (result2.status === Office.AsyncResultStatus.Succeeded) {
-                    showStatus('Email replaced successfully!', 'success');
-                } else {
-                    showStatus('Error replacing email: ' + result2.error.message, 'error');
-                }
-            });
+            showStatus('Selection replaced successfully!', 'success');
         } else {
-            showStatus('Error reading email body: ' + result.error.message, 'error');
+            showStatus('Error: ' + result.error.message + '. Make sure you have text selected in the email.', 'error');
         }
     });
 };
 
-// Insert draft below existing text
-window.insertBelow = function() {
-    const draftText = document.getElementById('draftOutput').textContent;
-    const item = Office.context.mailbox.item;
+// Copy draft to clipboard
+window.copyToClipboard = function() {
+    const draftText = document.getElementById('draftTextarea').value;
     
-    item.body.getAsync(Office.CoercionType.Text, (result) => {
-        if (result.status === Office.AsyncResultStatus.Succeeded) {
-            const combined = result.value + '\n\n---\n\n' + draftText;
-            item.body.setAsync(combined, { coercionType: Office.CoercionType.Text }, (result2) => {
-                if (result2.status === Office.AsyncResultStatus.Succeeded) {
-                    showStatus('Draft inserted below!', 'success');
-                } else {
-                    showStatus('Error inserting draft: ' + result2.error.message, 'error');
-                }
-            });
-        }
+    // Use the Clipboard API
+    navigator.clipboard.writeText(draftText).then(() => {
+        showStatus('Draft copied to clipboard!', 'success');
+    }).catch(err => {
+        showStatus('Error copying to clipboard: ' + err.message, 'error');
     });
 };
 
