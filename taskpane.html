@@ -38,7 +38,7 @@
             font-size: 13px;
             color: #e0e0e0;
         }
-        select, button, input[type="text"], input[type="password"] {
+        select, button, input[type="text"], input[type="password"], textarea {
             width: 100%;
             padding: 10px;
             margin: 5px 0 10px 0;
@@ -48,8 +48,14 @@
             box-sizing: border-box;
             background-color: #2d2d2d;
             color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
         }
-        select:focus, input:focus {
+        textarea {
+            resize: vertical;
+            min-height: 150px;
+            line-height: 1.6;
+        }
+        select:focus, input:focus, textarea:focus {
             outline: none;
             border-color: #0078d4;
         }
@@ -78,17 +84,7 @@
         }
         #draftOutput {
             margin-top: 20px;
-            padding: 15px;
-            background-color: #2d2d2d;
-            border-left: 4px solid #0078d4;
-            border-radius: 4px;
-            white-space: pre-wrap;
-            font-family: 'Segoe UI', sans-serif;
-            line-height: 1.6;
             display: none;
-            max-height: 300px;
-            overflow-y: auto;
-            color: #e0e0e0;
         }
         .status {
             margin: 10px 0;
@@ -153,6 +149,12 @@
         .model-indicator strong {
             color: #4a9eff;
         }
+        .instruction-text {
+            font-size: 12px;
+            color: #888;
+            margin-top: 5px;
+            font-style: italic;
+        }
         
         /* Scrollbar styling for dark mode */
         ::-webkit-scrollbar {
@@ -203,11 +205,15 @@
 
             <div id="statusMessage" class="status"></div>
 
-            <div id="draftOutput"></div>
+            <div id="draftOutput">
+                <label><strong>Draft (editable):</strong></label>
+                <textarea id="draftTextarea"></textarea>
+                <div class="instruction-text">💡 Tip: Select your text in the email, then click "Replace Selection"</div>
+            </div>
 
             <div id="actionButtons" style="display: none;">
-                <button onclick="replaceEmail()">Replace All</button>
-                <button class="secondary-btn" onclick="insertBelow()">Insert Below</button>
+                <button onclick="replaceSelection()">Replace Selection</button>
+                <button class="secondary-btn" onclick="copyToClipboard()">Copy to Clipboard</button>
             </div>
 
             <div class="settings-link">
