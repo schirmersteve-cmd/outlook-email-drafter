@@ -248,52 +248,104 @@ window.replaceSelection = function() {
     });
 };
 
-// Find the last <p ...> or <div ...> opening tag that appears before the
-// signature marker. Outlook applies the user's default mail font (e.g.
-// Calibri 11pt) as inline style on each content paragraph; cloning that
-// tag's full open/close keeps the cascade intact when we rebuild the body.
-function extractParagraphTemplate(html) {
-    const sigIdx = html.indexOf('Best regards,');
-    const region = sigIdx === -1 ? html : html.substring(0, sigIdx);
-    const tagRegex = /<(p|div)\b[^>]*>/gi;
-    let last = null;
-    let m;
-    while ((m = tagRegex.exec(region)) !== null) {
-        last = m;
-    }
-    if (!last) return { open: '<p>', close: '</p>' };
-    return { open: last[0], close: `</${last[1].toLowerCase()}>` };
-}
-
-// Convert plain-text draft to HTML, cloning Outlook's existing paragraph
-// styling so the font/size/family match the rest of the email.
-function draftTextToHtml(text, template) {
-    const esc = (s) => s
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    return text
+// Build draft paragraphs inside `parent`, inserted before `beforeNode`.
+// If a template element is provided, clone its tag/attrs (preserving font
+// styles, MsoNormal class, etc.) so the new content matches the look of
+// the surrounding email. Blank lines split paragraphs; single newlines
+// become <br> within a paragraph.
+function appendDraftParagraphs(doc, parent, draftText, template, beforeNode) {
+    const paragraphs = draftText
         .split(/\n\s*\n/)
-        .filter(p => p.trim().length > 0)
-        .map(p => template.open + esc(p).replace(/\n/g, '<br>') + template.close)
-        .join('');
+        .map(p => p.replace(/^\s+|\s+$/g, ''))
+        .filter(p => p.length > 0);
+    for (const para of paragraphs) {
+        let block;
+        if (template) {
+            block = template.cloneNode(false);
+            block.innerHTML = '';
+        } else {
+            block = doc.createElement('p');
+        }
+        const lines = para.split('\n');
+        lines.forEach((line, i) => {
+            block.appendChild(doc.createTextNode(line));
+            if (i < lines.length - 1) block.appendChild(doc.createElement('br'));
+        });
+        if (beforeNode) {
+            parent.insertBefore(block, beforeNode);
+        } else {
+            parent.appendChild(block);
+        }
+    }
 }
 
-// Find the signature block inside an HTML body by searching for the marker.
-// Walks back from the marker to the nearest containing block tag so we
-// capture the whole signature (text + logo + links), not a partial fragment.
-function extractSignatureHtml(html) {
-    const marker = 'Best regards,';
-    const idx = html.indexOf(marker);
-    if (idx === -1) return '';
-    const before = html.substring(0, idx);
-    const candidates = ['<p', '<div', '<table'].map(t => before.lastIndexOf(t));
-    const blockStart = Math.max(...candidates);
-    return blockStart >= 0 ? html.substring(blockStart) : html.substring(idx);
+// Parse the Outlook body as a DOM, find the signature's enclosing block,
+// remove ONLY the user's-notes siblings that come before it, and insert
+// the draft in their place. The signature element and everything after
+// it (including the quoted chain, even when wrapped in <blockquote> or
+// container divs) is left structurally untouched.
+function surgicalBodyReplace(originalHtml, draftText) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(originalHtml, 'text/html');
+    const body = doc.body;
+
+    const walker = doc.createTreeWalker(body, NodeFilter.SHOW_TEXT, null);
+    let sigTextNode = null;
+    while (walker.nextNode()) {
+        if (walker.currentNode.nodeValue.indexOf('Best regards,') !== -1) {
+            sigTextNode = walker.currentNode;
+            break;
+        }
+    }
+
+    let sigBlock = null;
+    if (sigTextNode) {
+        let el = sigTextNode.parentElement;
+        while (el && el !== body) {
+            if (el.tagName === 'P' || el.tagName === 'DIV') {
+                sigBlock = el;
+                break;
+            }
+            el = el.parentElement;
+        }
+    }
+
+    if (!sigBlock) {
+        // No signature anchor — strip body and write just the draft.
+        while (body.firstChild) body.removeChild(body.firstChild);
+        appendDraftParagraphs(doc, body, draftText, null, null);
+        return { html: doc.documentElement.outerHTML, signaturePreserved: false };
+    }
+
+    const parent = sigBlock.parentElement;
+    const beforeSig = [];
+    let cur = sigBlock.previousSibling;
+    while (cur) {
+        beforeSig.unshift(cur);
+        cur = cur.previousSibling;
+    }
+
+    // Pick the first existing notes paragraph as the styling template so
+    // the new paragraphs inherit the user's default mail font.
+    let template = null;
+    for (const n of beforeSig) {
+        if (n.nodeType === 1 && (n.tagName === 'P' || n.tagName === 'DIV') && n.textContent.trim()) {
+            template = n;
+            break;
+        }
+    }
+    // If no styled notes paragraph was found before sigBlock, fall back to
+    // cloning the sigBlock itself (same font cascade, just empty content).
+    if (!template) template = sigBlock;
+
+    for (const n of beforeSig) parent.removeChild(n);
+    appendDraftParagraphs(doc, parent, draftText, template, sigBlock);
+
+    return { html: doc.documentElement.outerHTML, signaturePreserved: true };
 }
 
-// Replace the entire email body (draft + preserved signature).
+// Replace the user's notes in the email body with the draft, keeping the
+// signature and quoted chain intact.
 window.replaceBody = function() {
     const draftText = document.getElementById('draftTextarea').value;
     const item = Office.context.mailbox.item;
@@ -304,14 +356,17 @@ window.replaceBody = function() {
             return;
         }
 
-        const html = getResult.value;
-        const template = extractParagraphTemplate(html);
-        const signatureHtml = extractSignatureHtml(html);
-        const newBody = draftTextToHtml(draftText, template) + signatureHtml;
+        let result;
+        try {
+            result = surgicalBodyReplace(getResult.value, draftText);
+        } catch (e) {
+            showStatus('Error rebuilding body: ' + e.message, 'error');
+            return;
+        }
 
-        item.body.setAsync(newBody, { coercionType: Office.CoercionType.Html }, (setResult) => {
+        item.body.setAsync(result.html, { coercionType: Office.CoercionType.Html }, (setResult) => {
             if (setResult.status === Office.AsyncResultStatus.Succeeded) {
-                const sigNote = signatureHtml ? ' (signature preserved)' : ' (no signature found)';
+                const sigNote = result.signaturePreserved ? ' (signature + chain preserved)' : ' (no signature found)';
                 showStatus('Email body replaced' + sigNote + '.', 'success');
             } else {
                 showStatus('Error: ' + setResult.error.message, 'error');
