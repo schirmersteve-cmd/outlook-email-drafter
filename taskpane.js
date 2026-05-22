@@ -248,42 +248,45 @@ window.replaceSelection = function() {
     });
 };
 
-// Build draft paragraphs inside `parent`, inserted before `beforeNode`.
-// If a template element is provided, clone its tag/attrs (preserving font
-// styles, MsoNormal class, etc.) so the new content matches the look of
-// the surrounding email. Blank lines split paragraphs; single newlines
-// become <br> within a paragraph.
-function appendDraftParagraphs(doc, parent, draftText, template, beforeNode) {
+// Build a DocumentFragment containing the draft as plain text nodes with
+// <br> for line breaks within a paragraph and <br><br> for paragraph
+// breaks. No <p>/<div> wrappers — the inserted nodes inherit whatever
+// font/size styling is in effect at the insertion point, so the draft
+// blends in with surrounding email styling.
+function buildDraftFragment(doc, draftText) {
+    const fragment = doc.createDocumentFragment();
     const paragraphs = draftText
         .split(/\n\s*\n/)
         .map(p => p.replace(/^\s+|\s+$/g, ''))
         .filter(p => p.length > 0);
-    for (const para of paragraphs) {
-        let block;
-        if (template) {
-            block = template.cloneNode(false);
-            block.innerHTML = '';
-        } else {
-            block = doc.createElement('p');
+
+    paragraphs.forEach((para, i) => {
+        if (i > 0) {
+            fragment.appendChild(doc.createElement('br'));
+            fragment.appendChild(doc.createElement('br'));
         }
         const lines = para.split('\n');
-        lines.forEach((line, i) => {
-            block.appendChild(doc.createTextNode(line));
-            if (i < lines.length - 1) block.appendChild(doc.createElement('br'));
+        lines.forEach((line, j) => {
+            if (j > 0) fragment.appendChild(doc.createElement('br'));
+            fragment.appendChild(doc.createTextNode(line));
         });
-        if (beforeNode) {
-            parent.insertBefore(block, beforeNode);
-        } else {
-            parent.appendChild(block);
-        }
-    }
+    });
+
+    // Blank line between draft and the existing signature.
+    fragment.appendChild(doc.createElement('br'));
+    fragment.appendChild(doc.createElement('br'));
+
+    return fragment;
 }
 
-// Parse the Outlook body as a DOM, find the signature's enclosing block,
-// remove ONLY the user's-notes siblings that come before it, and insert
-// the draft in their place. The signature element and everything after
-// it (including the quoted chain, even when wrapped in <blockquote> or
-// container divs) is left structurally untouched.
+// Parse the Outlook body as a DOM, find the "Best regards," text node,
+// create a Range from the start of <body> to that text position, and
+// delete its contents. Range.deleteContents handles structural cuts
+// safely — it strips child content from intermediate containers without
+// breaking opening/closing tag pairs, so the chain (and any wrapping
+// blockquote/divs after the signature) is left untouched. The draft
+// is then inserted at the collapsed range position as plain text +
+// <br>s, inheriting styling from whatever container it lands in.
 function surgicalBodyReplace(originalHtml, draftText) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(originalHtml, 'text/html');
@@ -291,55 +294,28 @@ function surgicalBodyReplace(originalHtml, draftText) {
 
     const walker = doc.createTreeWalker(body, NodeFilter.SHOW_TEXT, null);
     let sigTextNode = null;
+    let sigOffset = -1;
     while (walker.nextNode()) {
-        if (walker.currentNode.nodeValue.indexOf('Best regards,') !== -1) {
+        const idx = walker.currentNode.nodeValue.indexOf('Best regards,');
+        if (idx !== -1) {
             sigTextNode = walker.currentNode;
+            sigOffset = idx;
             break;
         }
     }
 
-    let sigBlock = null;
-    if (sigTextNode) {
-        let el = sigTextNode.parentElement;
-        while (el && el !== body) {
-            if (el.tagName === 'P' || el.tagName === 'DIV') {
-                sigBlock = el;
-                break;
-            }
-            el = el.parentElement;
-        }
-    }
-
-    if (!sigBlock) {
-        // No signature anchor — strip body and write just the draft.
+    if (!sigTextNode) {
+        // No sig anchor — wipe the body and write just the draft.
         while (body.firstChild) body.removeChild(body.firstChild);
-        appendDraftParagraphs(doc, body, draftText, null, null);
+        body.appendChild(buildDraftFragment(doc, draftText));
         return { html: doc.documentElement.outerHTML, signaturePreserved: false };
     }
 
-    const parent = sigBlock.parentElement;
-    const beforeSig = [];
-    let cur = sigBlock.previousSibling;
-    while (cur) {
-        beforeSig.unshift(cur);
-        cur = cur.previousSibling;
-    }
-
-    // Pick the first existing notes paragraph as the styling template so
-    // the new paragraphs inherit the user's default mail font.
-    let template = null;
-    for (const n of beforeSig) {
-        if (n.nodeType === 1 && (n.tagName === 'P' || n.tagName === 'DIV') && n.textContent.trim()) {
-            template = n;
-            break;
-        }
-    }
-    // If no styled notes paragraph was found before sigBlock, fall back to
-    // cloning the sigBlock itself (same font cascade, just empty content).
-    if (!template) template = sigBlock;
-
-    for (const n of beforeSig) parent.removeChild(n);
-    appendDraftParagraphs(doc, parent, draftText, template, sigBlock);
+    const range = doc.createRange();
+    range.setStart(body, 0);
+    range.setEnd(sigTextNode, sigOffset);
+    range.deleteContents();
+    range.insertNode(buildDraftFragment(doc, draftText));
 
     return { html: doc.documentElement.outerHTML, signaturePreserved: true };
 }
