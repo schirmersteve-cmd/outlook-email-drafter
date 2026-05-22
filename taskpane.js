@@ -248,9 +248,26 @@ window.replaceSelection = function() {
     });
 };
 
-// Convert plain-text draft to HTML paragraphs (blank lines split paragraphs;
-// single newlines become <br>). Escapes the four HTML-special chars.
-function draftTextToHtml(text) {
+// Find the last <p ...> or <div ...> opening tag that appears before the
+// signature marker. Outlook applies the user's default mail font (e.g.
+// Calibri 11pt) as inline style on each content paragraph; cloning that
+// tag's full open/close keeps the cascade intact when we rebuild the body.
+function extractParagraphTemplate(html) {
+    const sigIdx = html.indexOf('Best regards,');
+    const region = sigIdx === -1 ? html : html.substring(0, sigIdx);
+    const tagRegex = /<(p|div)\b[^>]*>/gi;
+    let last = null;
+    let m;
+    while ((m = tagRegex.exec(region)) !== null) {
+        last = m;
+    }
+    if (!last) return { open: '<p>', close: '</p>' };
+    return { open: last[0], close: `</${last[1].toLowerCase()}>` };
+}
+
+// Convert plain-text draft to HTML, cloning Outlook's existing paragraph
+// styling so the font/size/family match the rest of the email.
+function draftTextToHtml(text, template) {
     const esc = (s) => s
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -259,7 +276,7 @@ function draftTextToHtml(text) {
     return text
         .split(/\n\s*\n/)
         .filter(p => p.trim().length > 0)
-        .map(p => '<p>' + esc(p).replace(/\n/g, '<br>') + '</p>')
+        .map(p => template.open + esc(p).replace(/\n/g, '<br>') + template.close)
         .join('');
 }
 
@@ -287,8 +304,10 @@ window.replaceBody = function() {
             return;
         }
 
-        const signatureHtml = extractSignatureHtml(getResult.value);
-        const newBody = draftTextToHtml(draftText) + signatureHtml;
+        const html = getResult.value;
+        const template = extractParagraphTemplate(html);
+        const signatureHtml = extractSignatureHtml(html);
+        const newBody = draftTextToHtml(draftText, template) + signatureHtml;
 
         item.body.setAsync(newBody, { coercionType: Office.CoercionType.Html }, (setResult) => {
             if (setResult.status === Office.AsyncResultStatus.Succeeded) {
