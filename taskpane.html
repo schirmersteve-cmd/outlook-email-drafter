@@ -193,11 +193,11 @@
                     <option value="diplomatic">Diplomatic</option>
                 </optgroup>
                 <optgroup label="⚙️ UTILITY / PERFORMANCE">
-                    <option value="cleanup" selected>Cleanup</option>
+                    <option value="cleanup">Cleanup</option>
                     <option value="sales">Sales Upgrade</option>
                 </optgroup>
                 <optgroup label="🧬 PERSONAL VOICE">
-                    <option value="myvoice">My Voice From Notes</option>
+                    <option value="myvoice" selected>My Voice From Notes</option>
                 </optgroup>
             </select>
 
@@ -208,11 +208,12 @@
             <div id="draftOutput">
                 <label><strong>Draft (editable):</strong></label>
                 <textarea id="draftTextarea"></textarea>
-                <div class="instruction-text">💡 Tip: Select your text in the email, then click "Replace Selection"</div>
+                <div class="instruction-text">💡 Replace Body swaps the whole email and keeps your signature. Replace Selection only overwrites highlighted text.</div>
             </div>
 
             <div id="actionButtons" style="display: none;">
-                <button onclick="replaceSelection()">Replace Selection</button>
+                <button onclick="replaceBody()">Replace Body</button>
+                <button class="secondary-btn" onclick="replaceSelection()">Replace Selection</button>
                 <button class="secondary-btn" onclick="copyToClipboard()">Copy to Clipboard</button>
             </div>
 

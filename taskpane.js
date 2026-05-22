@@ -3,8 +3,21 @@ Office.onReady((info) => {
     if (info.host === Office.HostType.Outlook) {
         console.log("Email Drafter loaded successfully");
         loadSettings();
+        restoreLastTone();
+        document.getElementById('toneSelect').addEventListener('change', (e) => {
+            localStorage.setItem('lastTone', e.target.value);
+        });
     }
 });
+
+function restoreLastTone() {
+    const saved = localStorage.getItem('lastTone');
+    if (!saved) return;
+    const select = document.getElementById('toneSelect');
+    if ([...select.options].some(o => o.value === saved)) {
+        select.value = saved;
+    }
+}
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 1024;
@@ -232,6 +245,59 @@ window.replaceSelection = function() {
         } else {
             showStatus('Error: ' + result.error.message + '. Make sure you have text selected in the email.', 'error');
         }
+    });
+};
+
+// Convert plain-text draft to HTML paragraphs (blank lines split paragraphs;
+// single newlines become <br>). Escapes the four HTML-special chars.
+function draftTextToHtml(text) {
+    const esc = (s) => s
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    return text
+        .split(/\n\s*\n/)
+        .filter(p => p.trim().length > 0)
+        .map(p => '<p>' + esc(p).replace(/\n/g, '<br>') + '</p>')
+        .join('');
+}
+
+// Find the signature block inside an HTML body by searching for the marker.
+// Walks back from the marker to the nearest containing block tag so we
+// capture the whole signature (text + logo + links), not a partial fragment.
+function extractSignatureHtml(html) {
+    const marker = 'Best regards,';
+    const idx = html.indexOf(marker);
+    if (idx === -1) return '';
+    const before = html.substring(0, idx);
+    const candidates = ['<p', '<div', '<table'].map(t => before.lastIndexOf(t));
+    const blockStart = Math.max(...candidates);
+    return blockStart >= 0 ? html.substring(blockStart) : html.substring(idx);
+}
+
+// Replace the entire email body (draft + preserved signature).
+window.replaceBody = function() {
+    const draftText = document.getElementById('draftTextarea').value;
+    const item = Office.context.mailbox.item;
+
+    item.body.getAsync(Office.CoercionType.Html, (getResult) => {
+        if (getResult.status !== Office.AsyncResultStatus.Succeeded) {
+            showStatus('Error reading body: ' + getResult.error.message, 'error');
+            return;
+        }
+
+        const signatureHtml = extractSignatureHtml(getResult.value);
+        const newBody = draftTextToHtml(draftText) + signatureHtml;
+
+        item.body.setAsync(newBody, { coercionType: Office.CoercionType.Html }, (setResult) => {
+            if (setResult.status === Office.AsyncResultStatus.Succeeded) {
+                const sigNote = signatureHtml ? ' (signature preserved)' : ' (no signature found)';
+                showStatus('Email body replaced' + sigNote + '.', 'success');
+            } else {
+                showStatus('Error: ' + setResult.error.message, 'error');
+            }
+        });
     });
 };
 
