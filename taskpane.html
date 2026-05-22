@@ -180,7 +180,7 @@
             <h2>✨ Email Drafter</h2>
             
             <div id="modelIndicator" class="model-indicator">
-                Currently using: <strong id="currentModel">Loading...</strong>
+                Currently using: <strong>Claude Sonnet 4.6</strong>
             </div>
             
             <label for="toneSelect"><strong>Select Style:</strong></label>
@@ -217,53 +217,22 @@
             </div>
 
             <div class="settings-link">
-                <a onclick="showSettingsView()">⚙️ Settings (API Keys)</a>
+                <a onclick="showSettingsView()">⚙️ Settings</a>
             </div>
         </div>
 
         <!-- SETTINGS VIEW -->
         <div id="settingsView" class="view">
             <a class="back-link" onclick="showMainView()">← Back</a>
-            
+
             <h2>⚙️ Settings</h2>
-            
-            <label for="apiProviderSelect">API Provider:</label>
-            <select id="apiProviderSelect" onchange="updateProviderFields()">
-                <option value="openai">OpenAI</option>
-                <option value="claude">Claude (Anthropic)</option>
-            </select>
 
-            <!-- OpenAI Settings -->
-            <div id="openaiSettings">
-                <h3>OpenAI Configuration</h3>
-                
-                <label for="openaiModelSelect">Model:</label>
-                <select id="openaiModelSelect">
-                    <option value="gpt-5.2">gpt-5.2 (default)</option>
-                    <option value="custom">Other (custom)</option>
-                </select>
-                
-                <div id="customModelDiv" style="display: none;">
-                    <label for="customModelInput">Custom Model Name:</label>
-                    <input type="text" id="customModelInput" placeholder="e.g., gpt-4-turbo">
-                </div>
-                
-                <label for="openaiKeyInput">API Key:</label>
-                <input type="password" id="openaiKeyInput" placeholder="sk-...">
-                <div class="info-text">Get your key at platform.openai.com/api-keys</div>
-            </div>
-
-            <!-- Claude Settings -->
-            <div id="claudeSettings" style="display: none;">
-                <h3>Claude Configuration</h3>
-                
-                <label for="claudeKeyInput">API Key:</label>
-                <input type="password" id="claudeKeyInput" placeholder="sk-ant-...">
-                <div class="info-text">Get your key at console.anthropic.com</div>
-            </div>
+            <label for="claudeKeyInput">Anthropic API Key:</label>
+            <input type="password" id="claudeKeyInput" placeholder="sk-ant-...">
+            <div class="info-text">Get your key at console.anthropic.com</div>
 
             <button onclick="saveSettings()" style="margin-top: 20px;">Save Settings</button>
-            
+
             <div id="settingsStatus" class="status"></div>
         </div>
 
