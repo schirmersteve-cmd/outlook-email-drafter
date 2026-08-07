@@ -266,6 +266,78 @@ function textBeforeInBlock(doc, block, targetNode, targetOffset) {
     return acc;
 }
 
+// Outlook's current compose default (what p.MsoNormal resolves to). Only used
+// when the body gives us nothing to copy from.
+const DEFAULT_PARA_FONT = 'Aptos, sans-serif';
+const DEFAULT_PARA_SIZE = '11.0pt';
+
+// The font actually in force at `el`, read off inline styles up the tree.
+//
+// Why not just set class="MsoNormal" and let the stylesheet do it: Office.js
+// hands back a body *fragment*, so the <style> block that defines p.MsoNormal
+// generally does not come with it. Without that rule the class is inert and
+// Word falls back to Times New Roman 12pt with default paragraph margins —
+// wrong font AND wrong spacing. Stamping the values inline is what survives
+// the getAsync/setAsync round trip.
+// The p.MsoNormal rule out of the message's own <style> block, when one came
+// through. This is the message's real body font, so it beats any constant we
+// could hardcode — Outlook's default changed from Calibri to Aptos not long
+// ago, and guessing wrong puts our paragraphs out of step with the signature.
+function msoNormalFont(html) {
+    const rule = /p\.MsoNormal[^{]*\{([^}]*)\}/i.exec(html || '');
+    if (!rule) return {};
+    const fam = /(?:^|[;\s])font-family\s*:\s*([^;]+)/i.exec(rule[1]);
+    const size = /(?:^|[;\s])font-size\s*:\s*([^;]+)/i.exec(rule[1]);
+    return {
+        family: fam ? fam[1].trim() : '',
+        size: size ? size[1].trim() : ''
+    };
+}
+
+// The font actually in force at `el`. Inline styles on the signature's own
+// ancestors win, then the stylesheet's p.MsoNormal rule, then the constants.
+function inheritedFont(el, sheetFont) {
+    let family = '';
+    let size = '';
+    let n = el;
+    while (n && n.nodeType === 1) {
+        if (n.style) {
+            if (!family && n.style.fontFamily) family = n.style.fontFamily;
+            if (!size && n.style.fontSize) size = n.style.fontSize;
+        }
+        if (family && size) break;
+        n = n.parentElement;
+    }
+    const s = sheetFont || {};
+    return {
+        family: family || s.family || DEFAULT_PARA_FONT,
+        size: size || s.size || DEFAULT_PARA_SIZE
+    };
+}
+
+// Make a paragraph render identically to the signature: same font, and
+// margin:0 to match p.MsoNormal. Keep the class too when the document uses it,
+// so the styled and inline paths agree if the stylesheet IS present.
+function stampParaStyle(doc, p, font) {
+    if (!p.className && doc.querySelector('.MsoNormal')) p.className = 'MsoNormal';
+    p.style.fontFamily = font.family;
+    p.style.fontSize = font.size;
+    p.style.marginTop = '0';
+    p.style.marginBottom = '0';
+    return p;
+}
+
+// A real empty paragraph. With margin:0 this is what produces the visible gap
+// between paragraphs — the same way Outlook does it when you press Enter twice.
+// Margins can't do the job here: matching the signature means margin:0, and
+// leaving the default margins in place is what made Case B's spacing too loose
+// while Case A's was too tight.
+function blankPara(doc, font) {
+    const p = stampParaStyle(doc, doc.createElement('p'), font);
+    p.appendChild(doc.createTextNode(' '));
+    return p;
+}
+
 // Parse the Outlook body as a DOM, locate the "Best regards," text node,
 // and delete everything from the start of <body> to that text position
 // via a Range. Range.deleteContents handles structural cuts safely
@@ -279,13 +351,20 @@ function textBeforeInBlock(doc, block, targetNode, targetOffset) {
 //      siblings of the sig block.
 //   B) Notes and sig live inside a single styled container element with
 //      <br>-separated text. The sig text node is a child of that
-//      container. Insert bare <p> elements inside the container, just
-//      before the sig text node; they inherit font/size from the
-//      container's inline style.
+//      container. Insert <p> elements inside the container, just before
+//      the sig text node.
 //
 // Either way the inserted blocks become real paragraph elements, so the
 // visual gap between paragraphs is a "proper" paragraph break, not
-// stacked <br>s.
+// stacked <br>s. Every inserted paragraph gets its font and margins
+// stamped inline by stampParaStyle, and paragraphs are separated by real
+// empty paragraphs rather than by margins.
+//
+// The two cases used to disagree, which is why this kept not converging:
+// Case A cloned the sig's p.MsoNormal (margin:0) and came out with NO gap
+// between paragraphs, while Case B used a bare <p> that picked up Word's
+// default Times 12pt AND ~1em margins — too loose, and the wrong font.
+// Fixing one made the other worse. Both now go through the same styling.
 function surgicalBodyReplace(originalHtml, draftText) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(originalHtml, 'text/html');
@@ -304,11 +383,15 @@ function surgicalBodyReplace(originalHtml, draftText) {
     }
 
     if (!sigText) {
-        // No sig anchor — wipe the body and write the draft as bare <p>s.
+        // No sig anchor — wipe the body and write the draft out fresh.
+        const sheetFont = msoNormalFont(originalHtml);
+        const font = inheritedFont(body, sheetFont);
         while (body.firstChild) body.removeChild(body.firstChild);
-        for (const para of splitParagraphs(draftText)) {
-            body.appendChild(buildParagraph(doc, doc.createElement('p'), para));
-        }
+        splitParagraphs(draftText).forEach((para, i) => {
+            if (i > 0) body.appendChild(blankPara(doc, font));
+            const p = stampParaStyle(doc, doc.createElement('p'), font);
+            body.appendChild(buildParagraph(doc, p, para));
+        });
         return { html: doc.documentElement.outerHTML, signaturePreserved: false };
     }
 
@@ -338,17 +421,27 @@ function surgicalBodyReplace(originalHtml, draftText) {
         insertBeforeRef = sigBlock;
     }
 
+    // Read the font before the delete below, while the sig's ancestor chain is
+    // still fully intact.
+    const font = inheritedFont(isBigContainer ? sigBlock : sigText.parentElement,
+                               msoNormalFont(originalHtml));
+
     const range = doc.createRange();
     range.setStart(body, 0);
     range.setEnd(sigText, sigOff);
     range.deleteContents();
 
-    for (const para of splitParagraphs(draftText)) {
-        const block = templateProto.cloneNode(false);
+    splitParagraphs(draftText).forEach((para, i) => {
+        if (i > 0) insertContainer.insertBefore(blankPara(doc, font), insertBeforeRef);
+        const block = stampParaStyle(doc, templateProto.cloneNode(false), font);
         block.innerHTML = '';
         buildParagraph(doc, block, para);
         insertContainer.insertBefore(block, insertBeforeRef);
-    }
+    });
+
+    // The range delete above removed whatever blank line separated the notes
+    // from the signature, so put one back.
+    insertContainer.insertBefore(blankPara(doc, font), insertBeforeRef);
 
     return { html: doc.documentElement.outerHTML, signaturePreserved: true };
 }
