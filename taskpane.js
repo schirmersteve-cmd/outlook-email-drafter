@@ -19,7 +19,7 @@ function restoreLastTone() {
     }
 }
 
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = 'claude-sonnet-5';
 const MAX_TOKENS = 1024;
 
 // Tone prompts for different email styles
@@ -218,6 +218,13 @@ async function callClaude(systemPrompt, userText, apiKey) {
         body: JSON.stringify({
             model: MODEL,
             max_tokens: MAX_TOKENS,
+            // Sonnet 5 turns adaptive thinking ON when this field is omitted
+            // (Sonnet 4.6 ran it off). max_tokens caps thinking + reply
+            // together, so leaving it on would eat the 1024-token budget and
+            // truncate drafts. Disabled keeps behavior identical to 4.6 and
+            // keeps the taskpane snappy. Remove this line (and raise
+            // MAX_TOKENS) if better drafts are worth the extra latency.
+            thinking: { type: 'disabled' },
             system: systemPrompt,
             messages: [
                 { role: 'user', content: userText }
