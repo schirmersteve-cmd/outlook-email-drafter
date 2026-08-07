@@ -22,6 +22,28 @@ function restoreLastTone() {
 const MODEL = 'claude-sonnet-5';
 const MAX_TOKENS = 1024;
 
+// The taskpane's "Currently using:" label is derived from MODEL rather than
+// written out in the HTML, so it cannot drift out of step with the model
+// actually being called (it sat on "Claude Sonnet 4.6" after the move to
+// Sonnet 5). Trailing numeric segments rejoin with a dot:
+// claude-sonnet-5 -> "Claude Sonnet 5", claude-opus-4-8 -> "Claude Opus 4.8".
+function modelDisplayName(id) {
+    const words = [];
+    const nums = [];
+    for (const part of String(id).split('-')) {
+        if (/^\d+$/.test(part)) nums.push(part);
+        else if (part) words.push(part[0].toUpperCase() + part.slice(1));
+    }
+    const name = words.join(' ');
+    return nums.length ? `${name} ${nums.join('.')}` : name;
+}
+
+// taskpane.js is loaded at the end of <body>, so the element already exists.
+(function showModelName() {
+    const el = document.getElementById('modelName');
+    if (el) el.textContent = modelDisplayName(MODEL);
+})();
+
 // Tone prompts for different email styles
 const tonePrompts = {
     professional: "Rewrite the following notes as a polished, professional business email. Use formal language, proper structure, and a respectful tone. Keep it clear and concise.\n\nPreserve original meaning and factual content. Do not invent details. Maintain the sender's voice. Do not add commitments, promises, or technical claims.\n\nDo not add any closing lines (like 'Thanks', 'Best regards', etc.) - the sender has their own signature.\n\nDo not use em dashes.",
