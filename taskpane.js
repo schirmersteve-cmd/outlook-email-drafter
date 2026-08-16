@@ -75,6 +75,33 @@ const subjectPrompts = {
     myvoice: "\n\nAlso provide an appropriate subject line for this email. Return it on the first line as 'Subject: [your subject]' followed by a blank line, then the email body."
 };
 
+// Appended when the compose item already has a subject (replies, forwards, or
+// a new mail Steve already titled). Without it the model volunteers a
+// "Subject: ..." line anyway and it ends up pasted into the body.
+const noSubjectInstruction = "\n\nThis email already has a subject line. Return the email body only. Do not include a 'Subject:' line or any heading before the body.";
+
+// Pull a leading "Subject: ..." line off the model's reply.
+// Runs on every response, not just the no-subject case: the instruction above
+// reduces stray subject lines but does not guarantee their absence, and a
+// leftover line is worse in the body than discarded. The caller decides
+// whether the value is worth writing to item.subject.
+function extractSubjectLine(text) {
+    const lines = text.split('\n');
+    let i = 0;
+    while (i < lines.length && !lines[i].trim()) i++;
+
+    const match = lines[i] ? lines[i].trim().match(/^\*{0,2}subject\*{0,2}\s*:\*{0,2}\s*(.*)$/i) : null;
+    if (!match) return { subject: null, body: text };
+
+    const rest = lines.slice(i + 1);
+    while (rest.length && !rest[0].trim()) rest.shift();
+
+    return {
+        subject: match[1].replace(/\*+$/, '').trim(),
+        body: rest.join('\n').trim()
+    };
+}
+
 // View Management
 window.showSettingsView = function() {
     document.getElementById('mainView').classList.remove('active');
@@ -167,9 +194,7 @@ window.generateDraft = async function() {
                     const tone = document.getElementById('toneSelect').value;
                     let prompt = tonePrompts[tone];
 
-                    if (!hasSubject) {
-                        prompt += subjectPrompts[tone];
-                    }
+                    prompt += hasSubject ? noSubjectInstruction : subjectPrompts[tone];
 
                     const claudeKey = localStorage.getItem('claudeKey');
                     if (!claudeKey) {
@@ -189,13 +214,16 @@ window.generateDraft = async function() {
                         return;
                     }
 
+                    const parsed = extractSubjectLine(draftText);
                     let generatedSubject = null;
-                    if (!hasSubject && draftText.startsWith('Subject:')) {
-                        const lines = draftText.split('\n');
-                        const subjectLine = lines[0];
-                        generatedSubject = subjectLine.replace('Subject:', '').trim();
-                        draftText = lines.slice(2).join('\n').trim();
-                        item.subject.setAsync(generatedSubject);
+                    if (parsed.subject) {
+                        // Strip it either way; only write it when the item has
+                        // no subject of its own, so a reply's "RE: ..." stands.
+                        draftText = parsed.body;
+                        if (!hasSubject) {
+                            generatedSubject = parsed.subject;
+                            item.subject.setAsync(generatedSubject);
+                        }
                     }
 
                     draftTextarea.value = draftText;
