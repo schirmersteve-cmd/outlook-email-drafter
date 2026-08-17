@@ -227,8 +227,10 @@ window.generateDraft = async function() {
                     }
 
                     draftTextarea.value = draftText;
-                    outputDiv.style.display = 'block';
-                    actionButtons.style.display = 'block';
+                    // 'flex', not 'block': an inline block here would beat the
+                    // stylesheet and collapse the fill-the-pane layout.
+                    outputDiv.style.display = 'flex';
+                    actionButtons.style.display = 'flex';
 
                     let statusMessage = 'Draft generated successfully!';
                     if (generatedSubject) {

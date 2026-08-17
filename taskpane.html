@@ -6,18 +6,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Email Drafter</title>
     <style>
+        /* Outlook owns the task pane width; this page is an iframe inside it, so
+           percentages here resolve against the pane we were given and cannot
+           widen it (there is no Outlook API for that either). What the layout
+           CAN do is stop wasting the width you drag out: one layer of padding
+           instead of two, a full-height flex column so the draft box fills the
+           pane, and controls that reflow to a row when there is room. */
+        html, body {
+            height: 100%;
+        }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            padding: 20px;
+            padding: 8px;
             margin: 0;
             background-color: #1e1e1e;
             color: #e0e0e0;
+            box-sizing: border-box;
+            display: flex;
         }
         .container {
             background: #252525;
-            padding: 20px;
+            padding: 14px;
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            /* min-height:0 lets the draft box shrink inside the flex column
+               instead of forcing the whole pane to overflow. */
+            min-height: 0;
+            overflow-y: auto;
         }
         h2 {
             margin-top: 0;
@@ -82,9 +100,32 @@
         .secondary-btn:hover {
             background-color: #3a3a3a;
         }
+        /* generateDraft() switches this to flex, not block, so the textarea
+           below can grow into the leftover pane height. */
         #draftOutput {
-            margin-top: 20px;
+            margin-top: 16px;
             display: none;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+        }
+        #draftTextarea {
+            flex: 1;
+            min-height: 120px;
+            /* No manual resize handle: it now sizes itself to the pane, and a
+               dragged inline height would win over the flex sizing. */
+            resize: none;
+        }
+        /* One row when the pane is wide enough for it, stacked when it is not.
+           The 150px basis is the flip point, so it follows the divider. */
+        #actionButtons {
+            display: none;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        #actionButtons button {
+            flex: 1 1 150px;
+            margin: 0;
         }
         .status {
             margin: 10px 0;
@@ -119,7 +160,15 @@
             display: none;
         }
         .view.active {
-            display: block;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+        }
+        /* Only the draft box flexes. Without this the header, picker and
+           buttons would compress before the container agreed to scroll. */
+        .view.active > *:not(#draftOutput) {
+            flex-shrink: 0;
         }
         .back-link {
             color: #4a9eff;
